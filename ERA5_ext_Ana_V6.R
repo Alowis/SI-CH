@@ -296,7 +296,7 @@ th2<-quantile(hazmat$Wg$data[which(hazmat[[2]]$data>0)],0.99,na.rm=T)
 metaHaz<-list()
 metavHour<-list()
 metavDaz<-list()
-for(hazard in 1:2){
+for(hazard in 1:3){
 if(hazard==1){hazdat=hazmat$Pr;th=thr}
 if(hazard==2){hazdat=hazmat$Wg;th=thw}
 if(hazard==3){hazdat1=hazmat$Pr;hazdat2=hazmat$Wg}
@@ -308,11 +308,18 @@ lonlatime <- expand.grid(lon, lat,time)
 formeta<-hazmat$Pr$data
 formeta2<-hazmat$Wg$data
 if (hazard == 3){
-
+  bolilos<-hazdat1$data 
   bolilos[hazdat1$data<th1 | hazdat2$data<th2] <- NA
   bolilos[hazdat1$data>=th1 & hazdat2$data>=th2] <- 1  
   formeta[hazdat1$data<th1 | hazdat2$data<th2] <- NA
   formeta2[hazdat1$data<th1 | hazdat2$data<th2] <- NA
+  
+  vectouf<- as.vector(bolilos)
+  length(na.omit(vectouf))
+  vrac<-as.vector(bolilos)
+  length(na.omit(vrac))
+  vecmeta<-as.vector(formeta)
+  vecmeta2<-as.vector(formeta2)
 }else
   {
   bolilos<-hazdat$data 
@@ -335,30 +342,24 @@ if (hazard == 3){
   if(hazard==1){vecmeta[which(vecmeta<vecthouf)] <- NA}
   if(hazard==2){vecmeta2[which(vecmeta2<vecthouf)]<- NA}
 }
-# vectouf<- as.vector(hazdat$data)
-# vecthouf<-as.vector(rep(thr,length(bolilos[1,1,])))
-# vectouf[which(vectouf<vecthouf)]<-NA
-# length(na.omit(vectouf))
-# vrac<-as.vector(bolilos)
-# length(na.omit(vrac))
-# vecmeta<-as.vector(formeta)
-# vecmeta2<-as.vector(formeta2)
+
 lonlatemp <- data.frame(cbind(lonlatime,vectouf))
 metav<-data.frame(cbind(lonlatime,vecmeta,vecmeta2))
 
-
-x=abs(rnorm(100*100,50,25))
-x=matrix(x,nrow=100)
-x1=melt(th)
+# 
+# x=abs(rnorm(100*100,50,25))
+# x=matrix(x,nrow=100)
+# x1=melt(th)
 
 
 if(hazard==1)metav<-metav[which(!is.na(metav[,4])),]
 if(hazard==2)metav<-metav[which(!is.na(metav[,5])),]
 if(hazard==3)metav<-metav[which(!is.na(metav[,5])),]
-
+print(length(metav$Var1)) 
 head(metav)
 lonlatemp2<-lonlatemp[which(lonlatemp[,4]==1),]
 spdata<-lonlatemp2[,-4]
+print(length(spdata$Var1))
 ep<-2
 sampspd<-spdata
 sampspd$Var1<-sampspd$Var1*16/5
@@ -367,10 +368,10 @@ sampspd$Var3<-sampspd$Var3-sampspd$Var3[1]+1
 sampspd$Var3<-sampspd$Var3
 samptt<-as.matrix(sampspd)
 
-walabibou<-kNNdist(sampspd,k=15,all=F)
-plot(walabibou[order(walabibou)],ylim=c(0,4))
-abline(h=epcl, col=2) 
-walabibou[order(walabibou)]
+# walabibou<-kNNdist(sampspd,k=15,all=F)
+# plot(walabibou[order(walabibou)],ylim=c(0,4))
+# abline(h=epcl, col=2) 
+# walabibou[order(walabibou)]
 #
 sqrt(0.5^2+0.5^2+1^2)
 epcl=2
@@ -427,21 +428,32 @@ metav$cluster<-spdata[,4]
 length(spdata[,4])
 length(metav[,4])
 spdata$Var3=spdata$Var3-spdata$Var3[1]+1
-
-
+length(metav$Var1)
+length(spdata$Var1)
 # for(m in unique(spdata[,4])){
 metav$time<-as_datetime(c(metav$Var3*60*60),origin="1900-01-01")
 metav$month=month(metav$time)
   event<-metav
   charloc<-paste(event[,1],event[,2])
   event$cloc=charloc
+  print(length(event$Var1))
 
   testev<-aggregate(list(rf= event[,4],wg=event[,5]),
                     by = list(ev = event[,6],loc=event[,9]),
                     FUN = function(x) c(sum = sum(na.omit(x)),max=max(na.omit(x))))
   testev <- do.call(data.frame, testev)
   
-
+  thl<-aggregate(list(rf= event[,4],wg=event[,5]),
+                    by = list(ev = event[,6]),
+                    FUN = function(x) c(l= length(x)))
+  thl<- do.call(data.frame, thl)
+  small<-thl$ev[which(thl$rf<15)]
+  bip<-which(!is.na(match(testev$ev,small)))
+  testev<-testev[-bip,]
+  bop<-which(!is.na(match(event$cluster,small)))
+  event<-event[-bop,]
+  length(unique(event$cluster))
+  length(unique(testev$ev))
   
   metamax<-aggregate(list(rf= testev[,3],wg=testev[,6]) ,
                      by = list(ev = testev[,1]),
@@ -452,8 +464,9 @@ metav$month=month(metav$time)
   metave<-aggregate(list(rf= event[,4],wg=event[,5]) ,
                       by = list(ev = event[,6]),
                       FUN = function(x) c(surf=length(x)))
+  
   metave <- do.call(data.frame, metave)
-
+  length(unique(metave$ev))
   
   tempcom<-aggregate(event[,7] ,
                      by = list(ev = event[,6]),
@@ -501,16 +514,16 @@ as.numeric.factor <- function(x) {as.numeric(levels(x))[x]}
   metave$latMR<-Rcar[,2]
   metave$lonMW<-Wcar[,1]
   metave$latMW<-Wcar[,2]
-  metaveN<-metave[which(metave$x.dur>2),]
+  metaveN<-metave
   hist(metaveN$Dmax)
   plot(metaveN$Dmax,metaveN$x.dur)
-  
+  length(unique(metaveN$ev))
 
 
   
 plot(metaveN$rf.max,metaveN$wg.max)
 metaHaz<-c(metaHaz,list(metaveN))
-metavHour<-c(metavHour,list(metav))
+metavHour<-c(metavHour,list(event))
 metavDaz<-c(metavDaz,list(testev))
 }
 
@@ -520,7 +533,7 @@ metavDaz<-c(metavDaz,list(testev))
 metaHax<-list()
 metavHax<-list()
 metavDax<-list()
-for (hx in 1:2){
+for (hx in 1:3){
 idout<-c()
 for (cl in metaHaz[[hx]]$ev){ 
   clev<-metavHour[[hx]][which(metavHour[[hx]]$cluster==cl),]
@@ -550,6 +563,18 @@ rep.col<-function(x,n){
 oc<-c()
 nvo<-c()
 nwo<-c()
+
+for (cl in metaHax[[1]]$ev){ 
+  clev<-metavDax[[1]][which(metavDax[[1]]$ev==cl),]
+  dd<-unique(metavHax[[1]]$time[which(metavHax[[1]]$cluster==cl)])
+  
+  clex<-do.call(rbind, replicate(length(dd),clev[,c(1,2)], simplify=FALSE))
+  cley<-do.call(rbind, replicate(length(clev[,1]),as.data.frame(dd),simplify=F))
+  ouch<-cbind(clex,cley)
+  nvo<-rbind(nvo,ouch)
+  print(cl)
+}
+
 for (cl in metaHax[[2]]$ev){ 
   clev<-metavDax[[2]][which(metavDax[[2]]$ev==cl),]
   dd<-unique(metavHax[[2]]$time[which(metavHax[[2]]$cluster==cl)])
@@ -560,36 +585,48 @@ for (cl in metaHax[[2]]$ev){
   nwo<-rbind(nwo,ouch)
   print(cl)
 }
+ #these data frame contains spatial id and temporal id over the duration of an event of each cell involved in that event. (e.g., if the event last 10 hours, each cell involved will be repeated 10 times even if the the cell is only impacted during 1 hour)
 
-
-# save(nvo,file="rainallclusters.Rdata")
-# save(nwo,file="windallclusters.Rdata")
-
-load(file="rainallclusters.Rdata")
-load(file="windallclusters.Rdata")
+# save(nvo,file="rainallclusters3.Rdata")
+# save(nwo,file="windallclusters3.Rdata")
+# 
+load(file="rainallclusters3.Rdata")
+load(file="windallclusters3.Rdata")
+  clev<-metavHax[[1]]
   cclev<-metavHax[[2]]
   clev$charloc<-paste(clev$Var1,clev$Var2)
   cclev$charloc<-paste(metavHax[[2]]$Var1,metavHax[[2]]$Var2)
   
   sp10<-match_df(nvo,nwo,on=c("loc","dd"))
-  sp03<-inner_join(nwo,nvo,by=c("loc","dd"))
 
-    
-  tesp<-aggregate(list(shit=sp03[,3]),
+  #Inner join in R:  Return only the rows in which the left table have matching keys in the right table
+  #this one set a pre-filter on events which have temporal overlap
+  sp03<-inner_join(nwo,nvo,by=c("loc","dd"))
+   
+   #aggregation by events and space, each row correpond to one cell involved in both rain and wind event
+   
+  tesp<-aggregate(list(len=sp03[,3]),
                     by = list(ev2=sp03[,1],ev1 = sp03[,4],loc=sp03[,2]),
                     FUN = function(x) c(length=length(unique(x))))
   tesp <- do.call(data.frame, tesp)
+  
+  #extract more metadata about the events
   names(metavDax[[2]])[1]="ev2"
   sp11<-inner_join(tesp,metavDax[[2]],by=c("ev2","loc"))
   sp11<-sp11[,c(1,2,3,4,8)]
+  
   names(metavDax[[1]])[1]="ev1"
   sp12<-inner_join(tesp,metavDax[[1]],by=c("ev1","loc"))
   sp12<-sp12[,c(1:6)]
   tespp<-data.frame(sp12,sp11[,5])
+  
+  
   endgame<-aggregate(list(rf=tespp[,5],wg=tespp[,7]), 
                      by = list(ev2=tespp[,1],ev1=tespp[,2]),  
                      FUN = function(x) c(length=length(x),max=max(x))) 
   endgame <- do.call(data.frame, endgame)
+  
+  #this part looks useless, just add duration of the overlap
   
   dude<-c()
   for (clb in endgame$ev1){
@@ -608,6 +645,8 @@ load(file="windallclusters.Rdata")
     dude2<-rbind(dude2,durax)
   }
   spdude<-inner_join(dude,dude2,by=c("dd"))
+  spdude$combin=paste(spdude$evr.x,spdude$evr.y)
+  
   
   temsp<-aggregate(list(shit=spdude[,2]),
                   by = list(ev1=spdude[,1],ev2 = spdude[,3]),
@@ -617,10 +656,23 @@ load(file="windallclusters.Rdata")
   endgame2<-na.omit(match(endgame$ev1,temsp$ev1))
   endgame3<-temsp[endgame2,]
   endgame4<-data.frame(endgame,endgame3[,3])
+  endgame4$combin=paste(endgame4$ev1,endgame4$ev2)
+  
+  for (kv in 1:length(endgame4$ev1)){
+    kev<-endgame4$combin[kv]
+    idc<-which(!is.na(match(spdude$combin,kev)))
+    inev<-spdude$dd[idc[1]]
+    endev<-spdude$dd[idc[length(idc)]]
+    endgame4$startime[kv]=inev
+    endgame4$endtime[kv]=endev
+  }
+  
+  endgame4$startime<-as_datetime(c(endgame4$startime),origin="1970-01-01")
+  endgame4$endtime<-as_datetime(c(endgame4$endtime),origin="1970-01-01")
 #Finito endgame4 is the compound events set
 
-compound<-endgame4[,-5]
-names(compound)=c("windevent","rainevent","space","rf.max","wg.max","time")
+compound<-endgame4[,-c(5)]
+names(compound)=c("windevent","rainevent","space","rf.max","wg.max","time","cev","startime","endtime")
 length(unique(compound$rainevent))
 comprain<-na.omit(match(metaHax[[1]]$ev,compound$rainevent))
 comprain2<-na.omit(match(compound$rainevent,metaHax[[1]]$ev))
@@ -720,9 +772,9 @@ p+ theme_bw() +coord_radar()
 
 
 #Seasonal analysis
-
-bibis<-aggregate(metaHax[[1]]$season,
-                 by = list(Month = metaHax[[1]]$x.month),
+bibcase<-compoundfinal
+bibis<-aggregate(bibcase$season,
+                 by = list(Month = bibcase$x.month),
                  FUN = function(x) c(n =length(x),x=x[1]))
 bibis <- do.call(data.frame, bibis)
 bibis$x.x[which(bibis$Month==9)]=4
@@ -740,8 +792,8 @@ hist(metaHaz$`Pr-Events`$wg.max)
 doubleExRevent<-metaHaz$`Pr-Events`[which(metaHaz$`Pr-Events`$wg.max>th2),]
 doubleExWevent<-metaHaz[[2]][which(metaHaz[[2]]$rf.mean>th1),]
 
-stseason<-metaHaz[[1]]
-var.int=stseason$x.dur
+stseason<-compoundfinal
+var.int=stseason$time
 hist(var.int,breaks=c(0,6,12,24,96))
 stseason$sizegr<-1
 stseason$sizegr[which(stseason$x.dur>6 & stseason$x.dur<13)]=2
@@ -750,10 +802,10 @@ stseason$sizegr[which(stseason$x.dur>24)]=4
 
 
 
-gr1<-stseason[which(stseason$x.dur<7)]
-gr2<-stseason[which(stseason$x.dur>6 & stseason$x.dur<13),]
-gr3<-stseason[which(stseason$x.dur>12 & stseason$x.dur<25),]
-gr4<-stseason[which(stseason$x.dur>24),]
+gr1<-stseason[which(stseason$time<7),]
+gr2<-stseason[which(stseason$time>6 & stseason$time<13),]
+gr3<-stseason[which(stseason$time>12 & stseason$time<25),]
+gr4<-stseason[which(stseason$time>24),]
 
 plot(gr1$wg.max,gr1$rf.max,xlim=c(0,50),ylim=c(0,130))
 points(gr2$wg.max,gr2$rf.max,col=2)
@@ -761,10 +813,10 @@ points(gr3$wg.max,gr3$rf.max,col=3)
 points(gr4$wg.max,gr4$rf.max,col=4)
 
 
-plot(gr1$rf.surf,gr1$x.dur,log="xy",xlim=c(1,10000),ylim=c(1,130))
-points(gr2$rf.surf,gr2$x.dur,col=2)
-points(gr3$rf.surf,gr3$x.dur,col=3)
-points(gr4$rf.surf,gr4$x.dur,col=4)
+plot(gr1$space,gr1$time,log="xy",xlim=c(1,10000),ylim=c(1,130))
+points(gr2$space,gr2$time,col=2)
+points(gr3$space,gr3$time,col=3)
+points(gr4$space,gr4$time,col=4)
 
 
 
@@ -881,7 +933,7 @@ max(metaHaz[[1]]$rf.max)
 ###################Spatiotemporal plot
 
 rbPal <- colorRampPalette(c('lightskyblue',"skyblue","gold","darkorange",'red',"purple"))
-ggplot(data=metaHax[[1]],aes(x=rf.surf,y=x.dur,colour=wg.max,size=rf.max))+
+ggplot(data=metaHax[[3]],aes(x=rf.surf,y=x.dur,colour=wg.max,size=rf.max))+
 geom_point(alpha=.5)+
   theme(axis.text=element_text(size=16),
                 axis.title=element_text(size=18,face="bold"),
@@ -934,60 +986,91 @@ legend(5,65, legend=c("DJF", "MAM","JJA","SON"),
 
 #############VALIDATION OF THE CLUSTERING METHOD##################
 totdates=list()
-for (haz in 1:3){
-stseason<-metaHax[[haz]]
-var.int=stseason$wg.max
+# for (haz in 1:3){
+# stseason<-metaHaz[[haz]]
+
+
+stseason<-compoundfinal
+var.int=stseason$rf.max
 mlev<-order(-var.int)
 plot(var.int[mlev])
-idmt<-stseason$ev[mlev]
-
-dates<-c()
+idmr<-stseason$rainevent[mlev]
+idmw<-stseason$windevent[mlev]
+datesr<-c()
+datesw<-c()
 for(idi in 1:10){
-idm=idmt[idi]
-maxevent<-metavHour[[haz]][which(metavHour[[haz]]$cluster==idm),]
-maxevent$time <- as_datetime(c(maxevent$Var3*60*60),origin="1900-01-01")
-print(idm)
-print(c(maxevent$time[1],maxevent$time[length(maxevent$time)]))
-dates<-rbind(dates,c(maxevent$time[1],maxevent$time[length(maxevent$time)]))
+print(idi)
+idm1=idmr[idi]
+idm2=idmw[idi]
+maxeventr<-metavHour[[1]][which(metavHour[[1]]$cluster==idm1),]
+maxeventw<-metavHour[[2]][which(metavHour[[2]]$cluster==idm2),]
+
+maxeventr$time <- as_datetime(c(maxeventr$Var3*60*60),origin="1900-01-01")
+maxeventw$time <- as_datetime(c(maxeventw$Var3*60*60),origin="1900-01-01")
+print(idm1)
+print(idm2)
+print(c(maxeventr$time[1],maxeventr$time[length(maxeventr$time)]))
+print(c(maxeventw$time[1],maxeventw$time[length(maxeventw$time)]))
+datesr<-rbind(datesr,c(maxeventr$time[1],maxeventr$time[length(maxeventr$time)]))
+datesw<-rbind(datesw,c(maxeventw$time[1],maxeventw$time[length(maxeventr$time)]))
 }
-dates<-as.data.frame(dates)
+datesr<-as.data.frame(datesr)
+datesw<-as.data.frame(datesw)
 dates[,1]<-as_datetime(dates[,1],origin="1970-01-01")
 dates[,2]<-as_datetime(dates[,2],origin="1970-01-01")
 names(dates)=c("start","end")
 totdates<-c(totdates,list(dates))
-}
-names(totdates)=c("Pr-Events","Wind_Events","Compound")
-plot(totdates[[1]][,1])
-points(totdates[[3]][,1],col=2,pch=3)
-points(totdates[[2]][,1],col=3,pch=4)
-
-write.csv(totdates[[2]], file = "windtop10valid3.csv")
 
 
+# names(totdates)=c("Pr-Events","Wind_Events","Compound")
+# plot(totdates[[1]][,1])
+# points(totdates[[3]][,1],col=2,pch=3)
+# points(totdates[[2]][,1],col=3,pch=4)
+# 
+# write.csv(totdates[[3]], file = "windcomptop10valid.csv")
 
-stseason<-metaHax[[1]]
-var.int=stseason$rf.max
-mlev<-order(-var.int)
-plot(var.int[mlev])
-idmt<-stseason$ev[mlev]
-idi=2
-idm=idmt[idi]
-maxevent<-metavHour[[1]][which(metavHour[[1]]$cluster==idm),]
+
+
+
+idi=1
+idm=idm[idi]
+maxevent<-metavHour[[haz]][which(metavHour[[haz]]$cluster==idm),]
 maxevent$time <- as_datetime(c(maxevent$Var3*60*60),origin="1900-01-01")
 print(idm)
-# print(c(maxevent1$time[1],maxevent1$time[length(maxevent1$time)]))
-# print(c(maxevent2$time[1],maxevent2$time[length(maxevent2$time)]))
-# maxevent<-maxevent2
-idkik=c()
-inti=seq(1,length(unique(maxevent$time)))
-colvect<-heat.colors(max(inti), alpha = 1)
+print(c(maxevent1$time[1],maxevent1$time[length(maxevent1$time)]))
+print(c(maxevent2$time[1],maxevent2$time[length(maxevent2$time)]))
+maxevent<-maxevent2
 
+idi=34
 
+print(idi)
+idm1=idmr[idi]
+idm2=idmw[idi]
+maxeventr<-metavHour[[1]][which(metavHour[[1]]$cluster==idm1),]
+maxeventw<-metavHour[[2]][which(metavHour[[2]]$cluster==idm2),]
+compou<-compound[which(compound$cev==paste(idm1,idm2)),]
 
+  
+maxeventr$time <- as_datetime(c(maxeventr$Var3*60*60),origin="1900-01-01")
+maxeventw$time <- as_datetime(c(maxeventw$Var3*60*60),origin="1900-01-01")
+
+maxeventri<- maxeventr[which(maxeventr$time==compou$startime),]
+maxeventrf<- maxeventr[which(maxeventr$time==compou$endtime),]
+
+maxeventwi<- maxeventw[which(maxeventw$time==compou$startime),]
+maxeventwf<- maxeventw[which(maxeventw$time==compou$endtime),]
+
+compou$sr=min(maxeventr$time)
+compou$er=max(maxeventr$time)
+compou$sw=min(maxeventw$time)
+compou$ew=max(maxeventw$time)
+print(maxeventr$time[1])
+
+#######################TRAJECTORY######################################
 # 
 # for (d in 1:length(unique(maxevent$time))){
 #   kik<-maxevent[which(maxevent$time==unique(maxevent$time)[d]),]
-#   points(kik$Var1,kik$Var2,col=d)
+# # points(kik$Var1,kik$Var2,col=d)
 # 
 #     centi<-as.numeric(kik[which(kik$vecmeta==max(kik$vecmeta))[1],c(1,2)])
 #   idkik<-rbind(idkik,c(d,max(kik$vecmeta),length(kik$vecmeta),centi))
@@ -1034,62 +1117,141 @@ colvect<-heat.colors(max(inti), alpha = 1)
 #   geom_path(data=pred, aes(F1, F2,group=G),linejoin="mitre",colour="red",size=1.5,alpha=0.6)+
 #   geom_point(data=pred, aes(F1, F2,group=G,color=X1),alpha=0.1)+
 #   coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)
+#####################################
 
-temp01<- hazdat$data[ , ,1]
-tmp_01 <- as.vector(temp01)
 
-lon=hazdat$lon
-lat=hazdat$lat
+temp01<- hazdat1$data[ , ,1]
+tmp_01a <- as.vector(temp01)
+
+lon=hazdat1$lon
+lat=hazdat1$lat
 lonlat <- as.matrix(expand.grid(lon,lat))
 
-tmp_02<-paste(maxevent[,1],maxevent[,2])
+tmp_02a<-paste(maxeventr[,1],maxeventr[,2])
+tmp_02b<-paste(maxeventw[,1],maxeventw[,2])
 mxs<-c()
-for (mx in unique(tmp_02)){
-maxevsum<-sum(maxevent$vecmeta[which(tmp_02==mx)])
+for (mx in unique(tmp_02a)){
+maxevsum<-sum(maxeventr$vecmeta[which(tmp_02a==mx)])
 mxs<-c(mxs,maxevsum)
 }
 
 mxv<-c()
-for (mv in unique(tmp_02)){
-  maxevacc<-max(maxevent$vecmeta2[which(tmp_02==mv)])
+for (mv in unique(tmp_02b)){
+  maxevacc<-max(maxeventw$vecmeta2[which(tmp_02b==mv)])
   mxv<-c(mxv,maxevacc)
 }
-tmp_05<-unique(tmp_02)
+tmp_05a<-unique(tmp_02a)
 tmp_03<-paste(lonlat[,1],lonlat[,2])
-tmp_04<-match(tmp_05,tmp_03)
-tmp_01[tmp_04]<-mxs
-tmp_01[-tmp_04]<-0
+tmp_04a<-match(tmp_05a,tmp_03)
+tmp_01a[tmp_04a]<-mxs
+tmp_01a[-tmp_04a]<-0
 nlat<-dim(lat)
 nlon=dim(lon)
-tmp_array <- array(tmp_01, dim=c(nlon,nlat))
+tmp_array <- array(tmp_01a, dim=c(nlon,nlat))
 
   grid <- expand.grid(lon=lon, lat=lat)
   mapmat=tmp_array
   #column 1634 corresponding to Dec 2015
   #This command compresses numbers larger than 6 to 6
   # plot.new()
-  tmp_06<-cbind(mxs,tmp_05)
-  tmp_07<-maxevent[match(tmp_05,tmp_02),]
-  elmaxou<-tmp_07
-  elmaxou$maxx=mxs
-  elmaxou$mwg=mxv
-  oyoy<-elmaxou
-  elmaxou$charloc=paste(elmaxou$Var1,elmaxou$Var2) 
-  oyoy$charloc=paste(oyoy$Var1,oyoy$Var2) 
-  verif<-match_df(oyoy,elmaxou,on=c("charloc"))
+  tmp_06a<-cbind(mxs,tmp_05a)
+  tmp_07a<-maxeventr[match(tmp_05a,tmp_02a),]
+  ohcrap<-which(is.na(match(tmp_03,tmp_02a)))
+  ouh<-data.frame(lonlat[ohcrap,],0,0,0,0,tmp_07a$time[1],0,0,0,0)
+
+  
+  elmaxoua<-tmp_07a
+  elmaxoua$maxx=mxs
+  elmaxoua$mwg=0
+  names(ouh)=names(elmaxoua)
+  elmaxoua1=rbind(elmaxoua,ouh)
+  elmaxoua$gr<-"0"
+  elmaxoua$tf="0"
+  timeco<-which(!is.na(match(elmaxoua$cloc,maxeventri$cloc)))
+  elmaxoua$gr[timeco]<-"1"
+  timeco<-which(!is.na(match(elmaxoua$cloc,maxeventrf$cloc)))
+  elmaxoua$gr[timeco]<-"2"
+  elmaxoua$tf[which(elmaxoua$time>=compou$startime&elmaxoua$time<=compou$endtime)]<-"1"
+
+  tmp_01b <- as.vector(temp01)
+  tmp_05b<-unique(tmp_02b)
+  tmp_04b<-match(tmp_05b,tmp_03)
+  tmp_01b[tmp_04b]<-mxv
+  tmp_01b[-tmp_04b]<-0
+  
+  nlat<-dim(lat)
+  nlon=dim(lon)
+  tmp_array <- array(tmp_01b, dim=c(nlon,nlat))
+  
+  grid <- expand.grid(lon=lon, lat=lat)
+  mapmat=tmp_array
+  #column 1634 corresponding to Dec 2015
+  #This command compresses numbers larger than 6 to 6
+  # plot.new()
+  # tmp_06b<-cbind(mxv,tmp_01b)
+  tmp_07b<-maxeventw[(match(tmp_05b,tmp_02b)),]
+  ohcrap<-which(is.na(match(tmp_03,tmp_02b)))
+  ouh<-data.frame(lonlat[ohcrap,],0,0,0,0,tmp_07b$time[1],0,0,0,0)
+ 
+  # tmp_07b<-tmp_07b[-which(is.na(tmp_07b$Var1)),]
+
+  elmaxoub<-tmp_07b
+  elmaxoub$maxx=NA
+  elmaxoub$mwg=mxv
+  names(ouh)=names(elmaxoub)
+  elmaxoub1=rbind(elmaxoub,ouh)
+  elmaxoub$gr<-"0"
+  elmaxoub$tf<-"0"
+  timeco<-which(!is.na(match(elmaxoub$cloc,maxeventwi$cloc)))
+  elmaxoub$gr[timeco]<-"3"
+  timeco<-which(!is.na(match(elmaxoub$cloc,maxeventwf$cloc)))
+  elmaxoub$gr[timeco]<-"4"
+  elmaxoub$tf[which(elmaxoub$time>=compou$startime&elmaxoub$time<=compou$endtime)]<-"2"
+
+  
+  bs.palette=colorRampPalette(c("white","aliceblue","skyblue","dodgerblue","dodgerblue4"),interpolate="spline",bias=1)
+  bs.palette2=colorRampPalette(c("lightgoldenrod1","goldenrod1" ,"orange","red"),interpolate="spline",bias=1.5)
+  bs.palette3=colorRampPalette(c("orange","blue","purple"),interpolate="linear",bias=1)
+    library(ggnewscale)
+    library(metR)
+  
   
   ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
     theme_bw(16)+
-    geom_raster(data=elmaxou,aes(x=Var1,y=Var2,fill=maxx,group=cluster),alpha=.9,interpolate = F)+
+    geom_raster(data=elmaxoub,aes(x=Var1,y=Var2,fill=mwg,group=cluster,alpha=mwg),interpolate = F)+
+    # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
+    # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
     geom_polygon(fill = "transparent", color = "gray10", size = 1) +
     coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
-  scale_fill_gradientn(colours = rgb.palette(100))+
-    geom_raster(data=oyoy,aes(x=Var1,y=Var2,fill=maxx,group=cluster),alpha=.1,interpolate = F)+
+    scale_fill_gradientn(colours = bs.palette2(100))+
+    new_scale_fill() +
+      geom_raster(data=elmaxoua,aes(x=Var1,y=Var2,fill=maxx,group=cluster,alpha=maxx),interpolate = F)+
+    # geom_contour_fill(data=elmaxoua1,aes(x=Var1,y=Var2,z=maxx,group=cluster),alpha=0.3,na.fill=T)+
+    scale_alpha_continuous(range = c(0.2, 0.7),trans="sqrt")+
+    scale_fill_gradientn(colours = bs.palette(100))
+    # scale_colour_gradientn(colours = bs.palette(100))
+  
+    ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+      theme_bw(16)+
+      geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+      coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+      geom_raster(data=elmaxoub,aes(x=Var1,y=Var2,fill=tf,group=cluster),alpha=.6,interpolate = F)+
+      geom_raster(data=elmaxoua,aes(x=Var1,y=Var2,fill=tf,group=cluster),alpha=0.7,interpolate = F)+
+      # scale_colour_gradientn(colours = bs.palette3(2))+
+      scale_alpha_continuous(range = c(0.4, 0.7),trans="exp")+
+      scale_fill_manual(values = c("0" = "lightgrey" ,"1"="blue", "2" ="red","3" = "gold","4" ="darkorange"))
+  
+  ohshit+   
+    geom_raster(data=elmaxoub,aes(x=Var1,y=Var2,fill=2,group=cluster),alpha=.5,interpolate = F)+
+    # new_scale("fill") +
+    scale_fill_gradientn(colours = bs.palette2(10))
+    
+  
     geom_raster(data=verif,aes(x=Var1,y=Var2,fill=15,group=cluster),alpha=.1,interpolate = F)
   
   ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
     theme_bw(16)+
-    geom_raster(data=oyoy,aes(x=Var1,y=Var2,fill=mwg,group=cluster),alpha=.9,interpolate = F)+
+    geom_raster(data=elmaxoua,aes(x=Var1,y=Var2,fill=maxx,group=cluster),alpha=.9,interpolate = F)+
     geom_polygon(fill = "transparent", color = "gray10", size = 1) +
     coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
     scale_fill_gradientn(colours = rgb.palette(100))
@@ -1102,12 +1264,14 @@ tmp_array <- array(tmp_01, dim=c(nlon,nlat))
     scale_fill_gradientn(colours = rgb.palette(100))
   
 
+elmaxou$charloc=paste(elmaxou$Var1,elmaxou$Var2) 
+oyoy$charloc=paste(oyoy$Var1,oyoy$Var2) 
+verif<-match_df(oyoy,elmaxou,on=c("charloc"))
 
-
-
+oyoy<-elmaxou
 
   par(mar=c(4,5,3,0))
-  int=seq(0,max(mxs),length.out=100)
+  int=seq(0,max(mxv),length.out=100)
   rgb.palette=colorRampPalette(c("white", 
                                  "royalblue","orange","red","purple"),interpolate="linear",bias=1)
   int2<-c(0,1)
@@ -1480,6 +1644,301 @@ save(metaevent,file="metaevents_rain_2018.Rdata")
 save(fams,file="Temporal_clust_R2018.Rdata")
 
 ###===========================================================================================================================
+
+##############################Cell by cell= where is the most prone to hazard comb?
+
+cellcount<-metavDax[[1]][which(!is.na(match(metavDax[[1]]$ev1,compoundfinal$rainevent))),]
+cellshit<-metavHax[[1]][which(!is.na(match(metavHax[[1]]$cluster,compoundfinal$rainevent))),]
+cellcount2<-metavDax[[2]][which(!is.na(match(metavDax[[2]]$ev2,compoundfinal$windevent))),]
+cellshit2<-metavHax[[2]][which(!is.na(match(metavHax[[2]]$cluster,compoundfinal$windevent))),]
+ccop<-na.omit(match(metavDax[[1]]$ev1,compoundfinal$rainevent))
+ccop2<-na.omit(match(metavDax[[2]]$ev2,compoundfinal$windevent))
+cellcount$megashit<-compound$cev[ccop]
+cellcount2$megashit<-compound$cev[ccop2]
+
+# cellshit$vecmeta2=NA
+# cellshit2$vecmeta=NA
+ccop<-na.omit(match(metavHax[[1]]$cluster,compoundfinal$rainevent))
+ccop2<-na.omit(match(metavHax[[2]]$cluster,compoundfinal$windevent))
+cellshit$megashit<-compound$cev[ccop]
+cellshit2$megashit<-compound$cev[ccop2]
+
+
+cellshit3<-as.data.frame(rbind(cellshit,cellshit2))
+names(cellcount2)=names(cellcount)
+cellcount<-as.data.frame(rbind(cellcount,cellcount2))
+cellshit$loc=paste(cellshit$Var1,cellshit$Var2)
+cellshit2<-unique(cellshit$loc)
+
+# compand<-inner_join(cellshit,cellshit2,by=c("megashit","cloc"))
+# bib<-c()
+# for(loci in 1: length(unique(compand$cloc))){
+#   local<-unique(compand$cloc)[loci]
+# trial<-compand[which(compand$cloc==local),]
+# trial2<-trial[order(trial$cloc),]
+# # trial2<-trial2[which(trial2$cloc=="-4 57"),]
+# dt<-difftime(trial2$time.x,trial2$time.y,unit="hours")
+# length(which(dt==0))
+# bib<-c(bib,median(na.omit(dt)))
+# }
+# 
+# bib<-data.frame(bib,unique(compand$cloc))
+# mbib<-match(bib$unique.compand.cloc.,compand$cloc)
+# bib<-data.frame(bib,compand[mbib,])
+
+
+cellcorr<-cellshit[na.omit(match(cellshit2,cellshit$loc)),]
+head(cellcount)
+
+
+
+
+
+length(unique(cellcount$ev))
+ucount<-aggregate(cellcount[,1] ,
+                  by = list(ev=cellcount[,7],loc=cellcount[,2]),
+                  FUN = function(x) c(n =length(x)))
+
+ucount2<-ucount[which(ucount$x==2),]
+
+location<-"-0.5 51.5"
+ucouthH<-ucount2[which(ucount2$loc==location),]
+mates<-which(!is.na(match(ucount2$ev,ucouthH$ev)))
+ucountmH<-ucount2[mates,]
+
+heathrowext<-aggregate(ucountmH[,3] ,
+                       by = list(loc=ucountmH[,2]),
+                       FUN = function(x) c(n =length(x)))
+heathrowext<-do.call(data.frame,heathrowext)
+heathrowext$x=heathrowext$x/max(heathrowext$x)
+heathrowext<-inner_join(heathrowext,cellcorr,by=c("loc"))
+heathrowext$cev=heathrowext$megashit
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  geom_raster(data=heathrowext,aes(x=Var1,y=Var2,fill=x,group=cluster),interpolate = F)+
+  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
+  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+  scale_fill_gradientn(colours = rgb.palette(100))
+
+sptdurloc<-inner_join(heathrowext,compoundfinal,by=c("cev"))
+mean(compoundfinal$space)
+mean(sptdurloc$time.y)
+bib<-c()
+for(loci in 1: length(unique(ucount2$loc))){
+  local<-unique(ucount2$loc)[loci]
+  ucouthH<-ucount2[which(ucount2$loc==local),]
+  ucouthH$cev=ucouthH$ev
+  trial<-semi_join(compoundfinal,ucouthH,by=c("cev"))
+  ohmerd<-c(median(trial$space),median(trial$time))
+  bib<-rbind(bib,ohmerd)
+}
+
+nrow(bib)
+bib<-data.frame(bib,unique(ucount2$loc))
+mbib<-match(bib$unique.ucount2.loc.,cellshit$cloc)
+bib<-data.frame(bib,cellshit[mbib,])
+plot(bib$X1) 
+hist(compoundfinal$space)
+median(compoundfinal$space)
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  geom_raster(data=bib,aes(x=Var1,y=Var2,fill=X1,group=cluster),interpolate = F)+
+  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
+  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+  scale_fill_gradientn(colours = rgb.palette(100))
+
+
+
+bcount<-aggregate(ucount[,3] ,
+                 by = list(loc=ucount[,2]),
+                 FUN = function(x) c(n =length(x)))
+bcount<-do.call(data.frame,bcount)
+
+bcount2<-aggregate(ucount2[,3] ,
+                  by = list(loc=ucount2[,2]),
+                  FUN = function(x) c(n =length(x)))
+bcount2<-do.call(data.frame,bcount2)
+
+bcount$loc=as.character(bcount$loc)
+bcoo1<-inner_join(bcount,cellcorr,by=c("loc"))
+
+bcount2$loc=as.character(bcount2$loc)
+bcoo2<-inner_join(bcount2,cellcorr,by=c("loc"))
+
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  geom_raster(data=bcoo2,aes(x=Var1,y=Var2,fill=x,group=cluster),interpolate = F)+
+  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
+  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+  scale_fill_gradientn(colours = rgb.palette(100))
+
+cellcount<-metavDax[[2]][which(!is.na(match(metavDax[[2]]$ev2,compoundfinal$windevent))),]
+cellshit<-metavHax[[2]][which(!is.na(match(metavHax[[2]]$cluster,compoundfinal$windevent))),]
+cellshit$loc=paste(cellshit$Var1,cellshit$Var2)
+cellshit2<-unique(cellshit$loc)
+cellcorr<-cellshit[na.omit(match(cellshit2,cellshit$loc)),]
+head(cellcount)
+length(unique(cellcount$ev))
+ucount<-aggregate(cellcount[,2] ,
+                  by = list(ev=cellcount[,1]),
+                  FUN = function(x) c(n =length(x)))
+
+bcount<-aggregate(cellcount[,2] ,
+                  by = list(loc=cellcount[,2]),
+                  FUN = function(x) c(n =length(x)))
+bcount<-do.call(data.frame,bcount)
+bcoo<-inner_join(bcount,cellcorr,by=c("loc"))
+
+bcootot<-data.frame(bcoo,bcoo1)
+bcootot$xt<-bcootot$x+bcootot$x.1
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  geom_raster(data=bcootot,aes(x=Var1,y=Var2,fill=xt,group=cluster),interpolate = F)+
+  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
+  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+  scale_fill_gradientn(colours = rgb.palette(100))
+
+
+cellcount<-metavDax[[1]]
+cellshit<-metavHax[[1]]
+cellshit$loc=paste(cellshit$Var1,cellshit$Var2)
+cellshit2<-unique(cellshit$loc)
+cellcorr<-cellshit[na.omit(match(cellshit2,cellshit$loc)),]
+head(cellcount)
+length(unique(cellcount$ev))
+
+ucount<-aggregate(cellcount[,3] ,
+                  by = list(ev=cellcount[,1],loc=cellcount[,2]),
+                  FUN = function(x) c(n =length(x)))
+ucount<-do.call(data.frame,ucount)
+
+bcount<-aggregate(cellcount[,2] ,
+                  by = list(loc=cellcount[,2]),
+                  FUN = function(x) c(n =length(x)))
+bcount<-do.call(data.frame,bcount)
+bcoos<-inner_join(bcount,cellcorr,by=c("loc"))
+
+location<-"-0.5 51.5"
+ucouthH<-ucount[which(ucount$loc==location),]
+mates<-which(!is.na(match(ucount$ev,ucouthH$ev)))
+ucountmH<-ucount[mates,]
+
+heathrowext<-aggregate(ucountmH[,3] ,
+                       by = list(loc=ucountmH[,2]),
+                       FUN = function(x) c(n =length(x)))
+heathrowext<-do.call(data.frame,heathrowext)
+heathrowext$x=heathrowext$x/max(heathrowext$x)
+heathrowext<-inner_join(heathrowext,cellcorr,by=c("loc"))
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  geom_raster(data=heathrowext,aes(x=Var1,y=Var2,fill=x,group=cluster),interpolate = F)+
+  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
+  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=18,face="italic"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.title = element_text(size=18),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+  scale_fill_gradientn(colours = rgb.palette(100))
+
+
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  geom_raster(data=bcoos,aes(x=Var1,y=Var2,fill=x,group=cluster),interpolate = F)+
+  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
+  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+  scale_fill_gradientn(colours = rgb.palette(100))
+
+
+#Comparison with spatial dependence method, the chi measure
+
+thr<-hazmat$Pr$data[,,1]
+for (i in (1:33)){
+  for(j in 1:45){
+    crappy<-hazmat$Pr$data[i,j,]
+    thr[i,j]<-quantile(crappy[which(crappy>0)],.99,na.rm=T)
+  }
+}
+
+thw<-hazmat$Wg$data[,,1]
+for (i in (1:33)){
+  for(j in 1:45){
+    crappy<-hazmat$Wg$data[i,j,]
+    thw[i,j]<-quantile(crappy[which(crappy>0)],.99,na.rm=T)
+  }
+}
+thrr<-as.vector(thr) 
+elonlat <- as.matrix(expand.grid(hazmat$Pr$lon,hazmat$Pr$lat))
+thrbg<-data.frame(elonlat,thrr)
+thrbg$gr=1
+thrbg$loc=paste(thrbg$Var1,thrbg$Var2)
+lolon<--0.5 
+lolat<-51.5
+lla<-which(hazmat$Pr$lat==lolat)
+llo<-which(hazmat$Pr$lon==lolon)
+localdat<-hazmat$Pr$data[llo,lla,]
+localth<-thrbg[which(thrbg$loc==location),]
+exid<-which(localdat>=localth$thrr)
+localex<-localdat[which(localdat>=localth$thrr)]
+
+empichi<-hazmat$Wg$data[,,1]
+for (i in (1:33)){
+  for(j in 1:45){
+    crappy<-hazmat$Pr$data[i,j,]
+    thw<-quantile(crappy[which(crappy>0)],.99,na.rm=T)
+    abo<-crappy[exid]
+    lex<-length(abo[which(abo>=thw)])
+    empichi[i,j]<-lex/length(exid)
+  }
+}
+
+chiemp<-as.vector(empichi) 
+elonlat <- as.matrix(expand.grid(hazmat$Pr$lon,hazmat$Pr$lat))
+chim<-data.frame(elonlat,chiemp)
+chim$gr=1
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.2)+
+  geom_raster(data=chim,aes(x=Var1,y=Var2,fill=chiemp,group=gr),alpha=.8,interpolate = F) +
+  scale_fill_gradientn(colours = rgb.palette(100),na.value = "aliceblue")+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=18,face="italic"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+        legend.title = element_text(size=18),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))+
+  scale_y_continuous(
+    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+  scale_x_continuous(
+    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
+
+
+######Now try to look at temporal overlap for 1 cell= lagtime between rainfall and wind in the cell (histogram)
+
+
 
 ########################Self organized map#####################
 # Load the kohonen package 
