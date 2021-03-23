@@ -24,7 +24,7 @@ library(metR)
 
 
 
-load(file="out/Wind_stfprint.Rdata")
+load(file="out/Wind_stfprint2.Rdata")
 load(file="out/Rain_stfprint.Rdata")
 load(file="out/RainEv_metap_1979-2019.Rdata")
 metaHar=metaHaf
@@ -39,8 +39,11 @@ load(file="out/WindEv_hdat_1979-2019.Rdata")
 load(file="out/WindEv_ldat_1979-2019.Rdata")
 
 library(nnet)
-evp<-metaHar$ev[which.is.max(metaHaf$len.max)]
-evento<-metavHar[which(metavHar$cluster==3250),]
+evp<-metaHar$ev
+evento<-metavHar[which(metavHar$cluster==3802),]
+
+cps<-metaHaf$ev
+maxeventwx<-metavHaf[which(metavHaf$cluster==1323),]
 
 #Quick event visualizer
 mapUK = SpacializedMap(database="world",regions = c("UK","France","Spain","Portugal","Italy","Ireland","Belgium","Netherland"))
@@ -58,30 +61,31 @@ lagl<-c(48,48.25,58.75,59)
 garea<-lagrid[which(!is.na(match(lagrid$Var1,logl)) | !is.na(match(lagrid$Var2,lagl))),]
 length(garea[,1])/length(lagrid[,1])
 library(ggalt)
+
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   geom_polygon(fill = "transparent", color = "gray10", size = 1) +
   coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
-  geom_encircle(aes(x=Var1, y=Var2,group=cluster),
-                data = evento, size = 2, color = "blue",s_shape=.8, expand=0,fill="blue",alpha=.1)+
+  # geom_encircle(aes(x=Var1, y=Var2,group=cluster),
+  #               data = evento, size = 2, color = "blue",s_shape=.8, expand=0,fill="blue",alpha=.1)+
   geom_bin2d(data=evento,aes(x=Var1,y=Var2,group=cluster,weight=vecmeta),alpha=.7,binwidth=c(.25,.25))+
   # stat_density_2d(data=evento,geom = "polygon", aes(x=Var1,y=Var2,group=cluster,fill=..level..),alpha=.3)+
-  scale_fill_viridis_c()
+  scale_fill_viridis_c()+
+  geom_bin2d(data=maxeventwx,aes(x=Var1,y=Var2,group=cluster,weight=vecmeta),alpha=.7,binwidth=c(.25,.25))
 
 
-
-geom_encircle(aes(x=Var1, y=Var2,group=gr),
-              data = maxeventwx, size = 2, color = "orange",s_shape=.8, expand=0,fill="orange",alpha=.5)+
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "grey50"),
-        legend.title = element_text(size=18),
-        legend.text = element_text(size=14),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
+#  geom_encircle(aes(x=Var1, y=Var2,group=cluster),
+#               data = maxeventwx, size = 2, color = "orange",s_shape=.8, expand=0,fill="orange",alpha=.5)+
+#   theme(axis.text=element_text(size=16),
+#         axis.title=element_text(size=18,face="italic"),
+#         panel.background = element_rect(fill = "white", colour = "grey50"),
+#         legend.title = element_text(size=18),
+#         legend.text = element_text(size=14),
+#         legend.key = element_rect(fill = "transparent", colour = "transparent"),
+#         legend.key.size = unit(1, "cm"))+
+#   scale_y_continuous(
+#     breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+#   scale_x_continuous(
+#     breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
 
 
 
@@ -121,7 +125,7 @@ sesp <- do.call(data.frame, sesp)
 
 
 
-#extract more metadata about the events Basically I will do everything from here: Spatial value (for combined  duration of the event), spatiotemporal value (only during the compound duration and in compound space), temporal (outside the compound space inside the compound time))
+ #extract more metadata about the events Basically I will do everything from here: Spatial value (for combined  duration of the event), spatiotemporal value (only during the compound duration and in compound space), temporal (outside the compound space inside the compound time))
 
 #1) the spatial compound (all time inside the compound space)
 #2) the temporal compound (all space inside the compound time)
@@ -130,23 +134,50 @@ sesp <- do.call(data.frame, sesp)
 
 ###############################RAIN###########################################
 
-metatest1<-metavDax[[1]]
+metatest1<-metavDar
 names(metatest1)[c(1)]=c("ev1")
 
-metatest<-rainacc
-names(metatest)[c(1)]=c("ev1")
+rrainacc<-c()
+olei<-c()
+for(ha in 1:4){
+  if(ha==1)load(file="interdat/allraininclusters1.Rdata")
+  if(ha==2)load(file="interdat/allraininclusters2.Rdata")
+  if(ha==3)load(file="interdat/allraininclusters3.Rdata")
+  if(ha==4)load(file="interdat/allraininclusters4.Rdata")
+  rainacc<-aggregate(list(len=olel[,4]),
+                     by = list(ev=olel[,5],loc=olel[,3]),
+                     FUN = function(x) c(length=length(x),sum=sum(x),max=max(x)))
+  rainacc <- do.call(data.frame, rainacc)
 
+  rainacev<-aggregate(list(len=rainacc[,4]),
+                      by = list(ev=rainacc[,1]),
+                      FUN = function(x) c(length=length(x),sum=sum(x),max=max(x)))
+  rainacev <- do.call(data.frame, rainacev)
+  rrainacc<-rbind(rrainacc,rainacc)
+  olei<-rbind(olei, olel)
+  #last join
+
+}
+
+
+metatest<-rrainacc
+names(metatest)[c(1)]=c("ev1")
+sptotal=F
 #1) Spatial compound
 metatestt<-join(metatest,metatest1,by=c("ev1","loc"))
 metatestt<-metatestt[,-c(6,7,8)]
 SCompR<-inner_join(metatestt,tesp,by=c("ev1","loc"))
 
-
+cevcx=unique(SCompR$cev[order(SCompR$len.sum,decreasing=T)])
+cevc=cevcx[13]
+oula<-SCompR[which(SCompR$cev==cevc),]
+ziv<-SCompR$len.sum[which(SCompR$cev==cevc)]
+plot(ziv[order(ziv)])
 
 
 spSCR<-aggregate(list(rf=SCompR[,4],wg=SCompR[,6]),
-                 by = list(ev2=SCompR[,7],ev1 = SCompR[,1]),
-                 FUN = function(x) c(length=length((x)),max=max(x)))
+                 by = list(ev2=SCompR[,6],ev1 = SCompR[,1]),
+                 FUN = function(x) c(length=length((x)),max=max(x),mean=mean(x)))
 spSCR <- do.call(data.frame, spSCR)
 
 # spSCR2<-aggregate(list(rf=spSCR[,6],wg=spSCR[,8]), 
@@ -161,24 +192,26 @@ for(rg in 1:length(spSCR$ev2)){
 }
 
 #3) Spatiotemporal compound
+
 names(sp03)<-c("ev2","loc","dd","ev1")
+#avoid repeating sp03 because... 
 spkik<-sp03 %>% group_by(ev1,dd,loc) %>% mutate(id = row_number())
-metatest<-metavHax[[1]]
-names(metatest)[c(6,7,9)]=c("ev1","dd","loc")
-names(olel)[5]="ev1"
-metatestx<-full_join(metatest,olel,by=c("ev1","dd","loc"))
+metatest<-metavHar
+names(metatest)[c(5,6,8)]=c("ev1","dd","loc")
+names(olei)[5]="ev1"
+metatestx<-full_join(metatest,olei,by=c("ev1","dd","loc"))
 sp20<-inner_join(metatestx,spkik,by=c("ev1","loc","dd"))
 spSTCR<-sp20[which(sp20$id==1),]
 
-spSTCR2<-aggregate(list(rf=spSTCR[,11],wg=spSTCR[,5]),
-                   by = list(ev2=spSTCR[,12],ev1 = spSTCR[,6],loc=spSTCR[,9]),
+spSTCR2<-aggregate(list(rf=spSTCR[,10]),
+                   by = list(ev2=spSTCR[,11],ev1 = spSTCR[,5],loc=spSTCR[,8]),
                    FUN = function(x) c(length=length(x),max=max(x,na.rm=T),sum=sum(x,na.rm=T)))
 spSTCR2 <- do.call(data.frame, spSTCR2)
 
 
-spSTFR<-aggregate(list(rf=spSTCR2[,6],wg=spSTCR2[,8]), 
+spSTFR<-aggregate(list(rf=spSTCR2[,6]), 
                   by = list(ev2=spSTCR2[,1],ev1=spSTCR2[,2]),  
-                  FUN = function(x) c(length=length(x),max=max(x))) 
+                  FUN = function(x) c(length=length(x),max=max(x),mean=mean(x))) 
 spSTFR<- do.call(data.frame, spSTFR)
 
 spSTCR2$cev=paste(spSTCR2$ev1,spSTCR2$ev2)
@@ -189,6 +222,7 @@ for(rg in 1:length(spSTFR$ev2)){
   rtime=as.character(spSTCR2$loc[which(spSTCR2$cev==lesev & spSTCR2$rf.sum==mr)])
   if(length(rtime)>0) spSTFR$maxlocstR[rg]<-rtime
 } 
+if(sptotal==T){
 #2) Temporal compound
 # metateste<-aggregate(list(rf=metatest[,4],wg=metatest[,5]),
 #                      by = list(ev1 = metatest[,6],dd=metatest[,7]),
@@ -213,10 +247,13 @@ for(rg in 1:length(spTCR2$ev2)){
   mr<-spTCR2$rf.max[rg]
   spTCR2$maxloctR[rg]<-as.character(spTCR$loc[which(spTCR$cev==lesev & spTCR$rf.sum==mr)])
 }
+}
+rm(metatestx,metatest,olei,olel)
+gc()
 
 ########################################WIND######################################## 
-metatest<-metavHax[[2]]
-names(metatest)[c(6,7,9)]=c("ev2","dd","loc")
+metatest<-metavHaf
+names(metatest)[c(5,6,8)]=c("ev2","dd","loc")
 
 #1) Spatial compound
 
@@ -224,14 +261,14 @@ SCompW<-inner_join(metatest,tesp,by=c("ev2","loc"))
 
 
 
-spSCW<-aggregate(list(rf=SCompW[,4],wg=SCompW[,5]),
-                 by = list(ev2=SCompW[,10],ev1 = SCompW[,6],loc=SCompW[,9]),
+spSCW<-aggregate(list(wg=SCompW[,4]),
+                 by = list(ev2=SCompW[,9],ev1 = SCompW[,5],loc=SCompW[,8]),
                  FUN = function(x) c(length=length((x)),max=max(x),sum=sum(x)))
 spSCW <- do.call(data.frame, spSCW)
 
-spSCW2<-aggregate(list(rf=spSCW[,6],wg=spSCW[,8]), 
+spSCW2<-aggregate(list(wg=spSCW[,5]), 
                   by = list(ev2=spSCW[,1],ev1=spSCW[,2]),  
-                  FUN = function(x) c(length=length(x),max=max(x))) 
+                  FUN = function(x) c(length=length(x),max=max(x),mean=mean(x))) 
 spSCW2<- do.call(data.frame, spSCW2)
 
 spSCW$cev=paste(spSCW$ev1,spSCW$ev2)
@@ -240,19 +277,21 @@ for(rg in 1:length(spSCW2$ev2)){
   mr<-spSCW2$wg.max[rg]
   spSCW2$maxlocsW[rg]<-as.character(spSCW$loc[which(spSCW$cev==lesev & spSCW$wg.max==mr)])
 }
+
+
 #3) Spatiotemporal compound
 
 spkik<-sp03 %>% group_by(ev2,dd,loc) %>% mutate(id = row_number())
 sp20<-inner_join(metatest,spkik,by=c("ev2","loc","dd"))
 spSTCW<-sp20[which(sp20$id==1),]
 
-spSTCW2<-aggregate(list(rf=spSTCW[,4],wg=spSTCW[,5]),
-                   by = list(ev2=spSTCW[,6],ev1 = spSTCW[,10],loc=spSTCW[,9]),
+spSTCW2<-aggregate(list(wg=spSTCW[,4]),
+                   by = list(ev2=spSTCW[,5],ev1 = spSTCW[,9],loc=spSTCW[,8]),
                    FUN = function(x) c(length=length((x)),max=max(x),sum=sum(x)))
 spSTCW2 <- do.call(data.frame, spSTCW2)
 
 
-spSTFW<-aggregate(list(rf=spSTCW2[,6],wg=spSTCW2[,8]), 
+spSTFW<-aggregate(list(wg=spSTCW2[,5]), 
                   by = list(ev2=spSTCW2[,1],ev1=spSTCW2[,2]),  
                   FUN = function(x) c(length=length(x),max=max(x))) 
 spSTFW<- do.call(data.frame, spSTFW)
@@ -263,6 +302,7 @@ for(rg in 1:length(spSTFW$ev2)){
   mr<-spSTFW$wg.max[rg]
   spSTFW$maxlocstW[rg]<-as.character(spSTCW2$loc[which(spSTCW2$cev==lesev & spSTCW2$wg.max==mr)])
 }
+if(sptotal==T){
 #2) Temporal compound
 
 TCompW<-inner_join(metatest,sesp,by=c("ev2","dd"))
@@ -285,20 +325,30 @@ for(rg in 1:length(spTCW2$ev2)){
 }
 
 
-
+}
 ####################################################################
+if(sptotal==F){
+  spSTFR<-spSCR
+  spSTFW<-spSCW2
+  names(spSTFW)[c(1,2)]=c("ev1","ev2")
+}
 spSTFR$gr="r"
 spSTFW$gr="w"
 spSTF<-full_join(spSTFR,spSTFW,by=c("ev1","ev2"))
+max(spSCR$rf.max)
+max(metaHar$len.max)
 
-plot(spSTF$wg.max.y,spSTF$rf.max.x)
+plot(spSTF$wg.max.y,spSTF$rf.max)
 for (mm in 1:length(spSTF$ev2)){
-  spSTF$rf.max.c[mm]=max(spSTF$rf.max.x[mm],na.rm=T)
-  spSTF$wg.max.c[mm]=max(spSTF$wg.max.y[mm],na.rm=T)
+  spSTF$rf.max.cs[mm]=max(spSTF$rf.max[mm],na.rm=T)
+  spSTF$wg.max.cs[mm]=max(spSTF$wg.max.y[mm],na.rm=T)
+  spSTF$rf.mean.cs[mm]=max(spSTF$rf.mean[mm],na.rm=T)
+  spSTF$wg.mean.cs[mm]=max(spSTF$wg.mean.y[mm],na.rm=T)
+  
 }
 
-plot(spSTF$wg.max.c,spSTF$rf.max.c)
-spSTF<-spSTF[,c(2,1,3,8,9,10,14,15,16,17)]
+plot(spSTF$wg.mean.cs,spSTF$rf.mean.cs)
+
 spSCW2<-spSCW2[,-3]
 spTCW2<-spTCW2[,-3]
 # spSCR2<-spSCR2[,-3]
@@ -371,6 +421,8 @@ names(tempscale)[3]="timescale"
 names(spacescale)[3]="spacescale"
 tscale<-inner_join(tempscale,spacescale,by=c("ev1","ev2"))
 
+rm(metatest, spkik)
+gc()
 spTiming<-data.frame(tempscale$combin,tempscale$ev1,tempscale$ev2)
 names(spTiming)=c("combin","ev1","ev2") 
 sesp$combin=paste(sesp$ev1,sesp$ev2)
@@ -386,18 +438,18 @@ for (kv in 1:length(spTiming$combin)){
 
 for (kv in 1:length(spTiming$ev1)){
   kev<-spTiming$ev1[kv]
-  idc<-which(!is.na(match(metavHax[[1]]$cluster,kev))) 
-  inev<-metavHax[[1]]$time[idc[1]]
-  endev<-metavHax[[1]]$time[idc[length(idc)]]
+  idc<-which(!is.na(match(metavHar$cluster,kev))) 
+  inev<-metavHar$time[idc[1]]
+  endev<-metavHar$time[idc[length(idc)]]
   spTiming$startimeRain[kv]=inev
   spTiming$endtimeRain[kv]=endev
 } 
 
 for (kv in 1:length(spTiming$ev2)){
   kev<-spTiming$ev2[kv]
-  idc<-which(!is.na(match(metavHax[[2]]$cluster,kev))) 
-  inev<-metavHax[[2]]$time[idc[1]]
-  endev<-metavHax[[2]]$time[idc[length(idc)]]
+  idc<-which(!is.na(match(metavHaf$cluster,kev))) 
+  inev<-metavHaf$time[idc[1]]
+  endev<-metavHaf$time[idc[length(idc)]]
   spTiming$startimeWind[kv]=inev
   spTiming$endtimeWind[kv]=endev
 }
@@ -422,29 +474,41 @@ names(lesbleu)<-c("ev2","wg.max.a")
 names(allez)<-c("ev1","rf.max.a")
 spSTP<-inner_join(spSTP,lesbleu,by=c("ev2"),all=T)
 spSTP<-inner_join(spSTP,allez,by=c("ev1"),all=T)
-compound<-spSTP
 
 
 
-plot(compound$rf.max.c,compound$rf.max.a)
-plot(metaHaz[[1]]$wg.max,metaHaz[[1]]$rf.max,pch=16,col=alpha("blue",.5))
-points(metaHaz[[2]]$wg.max,metaHaz[[2]]$rf.max,pch=16,col=alpha("red",.5))
-points(compound$wg.max.c,compound$rf.max.c,pch=16,col=alpha("green",.5))
-abline(a=0,b=1)
+compound<-inner_join(spSTP,tscale,by=c("ev1","ev2","combin"))
+for (ti in 1:length(compound$ev2)){
+  compound$ORtime[ti]<-difftime(max(compound$endtimeRain[ti],compound$endtimeWind[ti]),min(compound$startimeRain[ti],compound$startimeWind[ti]),unit="hours")+1}
 
-comprain<-na.omit(match(metaHax[[1]]$ev,compound$ev1))
-comprain2<-na.omit(match(compound$ev1,metaHax[[1]]$ev))
-cocor<-metaHax[[1]][comprain,]
-cocor2<-metaHax[[1]][comprain2,]
-cocor3<-data.frame(compound,cocor2[,c(11,14:21)])
+compound$rf.mean.cs= spSTF$rf.mean.cs
 
-compwind<-na.omit(match(metaHax[[2]]$ev,compound$ev2))
-compwind2<-na.omit(match(compound$ev2,metaHax[[2]]$ev))
-cocow<-metaHax[[2]][compwind,]
-cocow2<-metaHax[[2]][compwind2,]
+
+compound$rf.mean.h=compound$rf.mean.cs/compound$ORtime
+compound$rf.max.h=compound$rf.max.cs/compound$ORtime
+plot(compound$ORtime,compound$rf.max.h)
+save(compound,file="out/CompoundRW_79-19.v2x.Rdata")
+write.csv(compound,file="out/CompoundRW_79-19.v1.csv")
+
+# plot(compound$rf.max.c,compound$rf.max.a)
+# plot(metaHaz[[1]]$wg.max,metaHaz[[1]]$rf.max,pch=16,col=alpha("blue",.5))
+# points(metaHaz[[2]]$wg.max,metaHaz[[2]]$rf.max,pch=16,col=alpha("red",.5))
+# points(compound$wg.max.c,compound$rf.max.c,pch=16,col=alpha("green",.5))
+# abline(a=0,b=1)
+
+comprain<-na.omit(match(metaHar$ev,compound$ev1))
+comprain2<-na.omit(match(compound$ev1,metaHar$ev))
+cocor<-metaHar[comprain,]
+cocor2<-metaHar[comprain2,]
+cocor3<-data.frame(compound,cocor2)
+
+compwind<-na.omit(match(metaHaf$ev,compound$ev2))
+compwind2<-na.omit(match(compound$ev2,metaHaf$ev))
+cocow<-metaHaf[compwind,]
+cocow2<-metaHaf[compwind2,]
 # compwind<-inner_join(metaHax[[2]],compound, by=c("ev"="ev2"))
 names(cocow2)
-cocow3<-cocow2[,c(11,14,22,23)]
+cocow3<-cocow2
 colnames(cocow3)
 
 
@@ -457,14 +521,16 @@ names(spTCW2)[c(1,2)]<-c("ev1","ev2")
 compoundfinalT<-inner_join(spTCR2,spTCW2,by=c("ev1","ev2"))
 
 
-names(compoundfinalST)[c(20,21,29,30)]<-c("rf.space","rf.time","wg.space","wg.time")
-compoundfinalST$ORspace=compoundfinalST$rf.space+compoundfinalST$wg.space-compoundfinalST$spacescale
+names(compoundfinalST)[c(28,29,42,44)]<-c("rf.space","rf.time","wg.space","wg.time")
+compoundfinalST$ORspace=compoundfinalST$vir.surf+compoundfinalST$wg.space-compoundfinalST$spacescale.x
 for (ti in 1:length(compoundfinalST$ev2)){
   compoundfinalST$ORtime[ti]<-difftime(max(compoundfinalST$endtimeRain[ti],compoundfinalST$endtimeWind[ti]),min(compoundfinalST$startimeRain[ti],compoundfinalST$startimeWind[ti]),unit="hours")+1}
 
 
 rm(cocor,cocor2,cocor3,cocow,cocow2,cocow3,spSTCR,spSTCR2,spSTCW,spSTCW2,spSTFW,spSTP,spSCR,spSCW,spSCW2,spkik,sp20,spSTF,spSTFR,samptt)
 gc()
+
+save (compoundfinalST,file="messycompound_79-19.Rdata")
 
 
 compoundfinalST$ratiospace=compoundfinalST$spacescale/compoundfinalST$ORspace
