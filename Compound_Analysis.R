@@ -46,86 +46,105 @@ load(file="out/Wind_stfprint2.Rdata")
 load(file="out/Rain_stfprint.Rdata")
 sp03<-inner_join(nwo3,nvo3,by=c("loc","dd"))
 
-
+#opportunity of saving data if 1st time running code
 # save(compoundfinalST,file ="out/CompoundRW_79-19.v3x.Rdata")
 
-###############NEW SEction###########################
+######################Boxplots of spatial and temporal scales##########
+# For Figure 8
 
-hex<-aggregate(list(len=sptdfr$Var1),
-               by = list(tstep<-sptdfr$Var3),
-               FUN = function(x) c(length=length(x)))
-hexr <- do.call(data.frame, hex)
+rainevi<-metaHar[,c(1,8,6)]
+rainevi$c="r"
+windevi<-metaHaf[,c(1,8,6)]
+windevi$c="w"
+compoundfinalST$ID=seq(1:length(compoundfinalST$combin))
+compevi<-compoundfinalST[,c(54,53,51)]
+compevi$c="c"
+names(compevi)[1]="ev"
+names(rainevi)=names(compevi)
+names(windevi)=names(compevi)
+mean(windevi$spacescale.y)/1485*100
+mean(rainevi$spacescale.y)/1485*100
+mean(compevi$spacescale.y)/1485*100
+totevi<-rbind(compevi,rainevi,windevi)
+totevi$footprint.log=log(totevi$spacescale.y)
 
-hexr$time<-as_datetime(c(unique(sptdfr$Var3*60*60)),origin="1900-01-01")
-days<-as.Date(as_datetime(c(sptdfr$Var3*60*60),origin="1900-01-01"),format="%Y-%m")
-mo<-format(as.Date(days),"%Y-%m")
-mon<-month(days)
+totevi$rpercent=totevi$spacescale.y/1485*100
+totevi$fpercent=log(totevi$rpercent)
+length(totevi$rpercent[which(totevi$c=="w" & totevi$rpercent>.1)])
 
-sptdfr$loc=paste(sptdfr$Var1,sptdfr$Var2,sep=" ")
-length(sptdfr$Var1[which(sptdfr$`rpip$cluster`==0)])/length(sptdfr$Var1)
-hex2<-aggregate(list(len=sptdfr$loc),
-                by = list(tstep<-mo),
-                FUN = function(x) c(length=length(x)))
-hex2 <- do.call(data.frame, hex2)
+# Function to use boxplot.stats for the outliers
+myout = function(x) {
+ data.frame(y=  log10(mean(10^x)))
+}
 
+myout(totevi$rpercent[which(totevi$c=="c")])
 
-hexx<-fill.gap(hexr)
-hexx$len[which(is.na(hexx$len))]=0
-plot(hex2$len,type="o",ylim=c(0,50000))
-plot(hexx$time, hexx$len,type="h")
-plot(sort(hex2$len),log="y")
+log10(4633346)
+hist((totevi$rpercent[which(totevi$c=="w")]))
 
-acf (hexx$len, lag = 48)
-abline(h=quantile(hexr$len,.95))
-
-exi<-extremalindex(hexx$len, threshold=100, method = "intervals")
-exi
-
-length(hexr$Group.1)/length(hexx$time)
-rbPal <- colorRampPalette(c('darkgreen',"gold","darkorange",'red'))
-
-mapUK = SpacializedMap(regions = c("UK","France","Spain","Portugal","Italy","Ireland"))
+length(totevi$rpercent[which(totevi$c=="w" & totevi$rpercent>10)])
 
 
-ukk<- gSimplify(mapUK, tol=0.001, topologyPreserve=TRUE)
-plot(ukk)
-uk_fort <- ggplot2::fortify(ukk)
-longlims=c(-6, 2)
-longdom=seq(longlims[1],longlims[2],by=.25)
-latlims=c(48,59)
-latdom=seq(latlims[1],latlims[2],by=.25)
+#spatlial scale
+ggplot(totevi, aes(x=c, y=rpercent,fill=c)) + 
+  geom_violin(trim=T,size=1,scale = "width",bw=.15)+
+  scale_fill_manual(values=c("darkgreen", "royalblue", "orange"))+
+  stat_summary(fun.data = myout, geom="point", shape=23, size=2,stroke=2)+
+  # coord_trans(y="log")+
+  scale_y_continuous(trans="log10",
+                     breaks = c(0.1,1,10,100),"Spatial footprint [%]",
+                     minor_breaks = c(0.5,5,50),
+                     labels=c("0.1","1","10","100")) +
+  scale_x_discrete("Cluster type",
+                     labels=c("Compound","Rain","Wind"))+
+  annotation_logticks(base=10,sides = "l")+
+  theme(axis.text=element_text(size=16),
+        legend.position = "none",
+        axis.title=element_text(size=18,face="italic"),
+        axis.ticks = element_line(color="black"),
+        panel.grid.major = element_line(size=1,colour = "grey80"),
+        panel.grid.minor.y = element_line(size=.4,colour = "grey90"),
+        panel.background = element_rect(fill = "transparent", colour = "grey50"),
+        legend.title = element_text(size=18),
+        panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))
 
-lagrid<-expand.grid(longdom,latdom)
-lagrid2<-SpatialEpi::latlong2grid(lagrid)
-lagrid2$x[1]-lagrid2$x[2]
 
-logl<-c(-6,-5.75,1.75,2)
-lagl<-c(48,48.25,58.75,59)
-garea<-lagrid[which(!is.na(match(lagrid$Var1,logl)) | !is.na(match(lagrid$Var2,lagl))),]
-lown<-c(lagrid[1,1]-0.125,lagrid[1,1]-0.125,lagrid[1,1]+0.125,lagrid[1,1]+0.125)
-lawn<-c(lagrid[1,2]-0.125,lagrid[1,2]+0.125,lagrid[1,2]+0.125,lagrid[1,2]-0.125)
+#temporal scale
+ggplot(totevi, aes(x=c, y=ORtime,fill=c)) + 
+  geom_violin(trim=T,scale = "width",size=1)+
+  scale_fill_manual(values=c("darkgreen", "royalblue", "orange"))+
+  scale_x_discrete("Cluster type",
+                   labels=c("Compound","Rain","Wind"))+
+  stat_summary(fun=mean, geom="point", shape=23, size=2,stroke=2)+
+  scale_y_continuous( breaks =c(0,24,48,72,96),"Duration [h]") +
+  theme(axis.text=element_text(size=16),
+        legend.position = "none",
+        axis.title=element_text(size=18,face="italic"),
+        panel.grid.major = element_line(size=1,colour = "grey80"),
+        panel.grid.minor.y = element_line(size=.4,colour = "grey90"),
+        panel.background = element_rect(fill = "transparent", colour = "grey50"),
+        legend.title = element_text(size=18),
+        panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))
 
-cell1<-data.frame(lown,lawn)
-areaPolygon(cell1)/1000000
-distm(lagrid[1,], lagrid[2,], fun = distGeo)
+mean (metaHar$x.dur)
+length(metaHar$x.dur[which(metaHar$x.dur>=24)])/length(metaHar$x.dur)
+mean(metaHaf$x.dur)
+length(metaHaf$x.dur[which(metaHaf$x.dur>=24)])/length(metaHaf$x.dur)
+mean(compound$ORtime)
+length(compound$ORtime[which(compound$ORtime>=24)])/length(compound$ORtime)
 
-rgb.palette=colorRampPalette(c("white", 
-                               "royalblue","orange","red","purple"),interpolate="linear",bias=1)
-rbPal2<-colorRampPalette(c('white',"blue","purple","red","orange"))
-
-
-Rcart=strsplit(compound$maxlocsR," ")
-Rcar<-as.data.frame(matrix(unlist(Rcart),ncol=2,byrow=T))
-Rcar[,1]<-as.numeric((Rcar[,1]))
-Rcar[,2]<-as.numeric((Rcar[,2]))
-
-Rcort=strsplit(compound$maxlocsW," ")
-Rcor<-as.data.frame(matrix(unlist(Rcort),ncol=2,byrow=T))
-Rcor[,1]<-as.numeric((Rcor[,1]))
-Rcor[,2]<-as.numeric((Rcor[,2]))
-
+qr=quantile (metaHar$vir.surf,c(0.1,0.5,.95))
+qw=quantile (metaHaf$viw.surf,c(0.1,0.5,.95))
+qc=quantile (compound$spacescale,c(0.1,0.5,.95))
 
 ############################Event visualiser###########################
+
 load(file="out/RainEv_hdat_1979-2019.Rdata")
 load(file="out/RainEv_ldat_1979-2019.Rdata")
 metavDar=metavDaf
@@ -146,93 +165,58 @@ plot(compound$rf.max[order(compound$rf.max)])
 plot(metatest$len.sum[order(metatest$len.sum)])
 length(unique(metatix$ev1))
 
+egr1<-metaHar[which(metaHar$vir.surf==qr[1]),]
+egr1$mxr=rank(-egr1$len.max)
+egr1=egr1[which(egr1$mxr==1),]
+
+egr2<-metaHar[which(metaHar$vir.surf==qr[2]),]
+egr2$mxr=rank(-egr2$len.max)
+egr2=egr2[which(egr2$mxr==1),]
+
+egr3<-metaHar[which(metaHar$vir.surf==qr[3]),]
+egr3$mxr=rank(-egr3$len.sum)
+egr3=egr3[which(egr3$mxr==2),]
+
+#Wind
+
+egw1<-metaHaf[which(metaHaf$viw.surf==qw[1]),]
+egw1$mxw=rank(-egw1$`metave[, c(2)]`)
+egw1=egw1[which(egw1$mxw==1),]
+
+egw2<-metaHaf[which(metaHaf$viw.surf==qw[2]),]
+egw2$mxw=rank(-egw2$`metave[, c(2)]`)
+egw2=egw2[which(egw2$mxw==3),]
+
+egw3<-metaHaf[which(metaHaf$viw.surf==qw[3]),]
+egw3$mxw=rank(-egw3$`metave[, c(2)]`)
+egw3=egw3[which(egw3$mxw==1),]
+
+
+#Compound
+compound$id=seq(1,length(compound$combin))
+egc1<-compound[which(compound$spacescale==qc[1]),]
+egc1$mxw=rank(-egc1$timescale)
+egc1=egc1[which(egc1$mxw==1),]
+
+egc2<-compound[which(compound$spacescale==qc[2]),]
+egc2$mxw=rank(-egc2$timescale)
+egc2=egc2[which(egc2$mxw==8),][1,]
+
+egc3<-compound[which(compound$spacescale==round(qc[3])),]
+egc3$mxw=rank(-egc3$timescale)
+egc3=egc3[which(egc3$mxw==1),]
+
+
+egr=rbind(egr1,egr2,egr3)
+         
+egw=rbind(egw1,egw2,egw3)
+
+egc=rbind(egc1,egc2,egc3)
 
 #Quick event visualizer
 mapUK = SpacializedMap(database="world",regions = c("UK","France","Spain","Portugal","Italy","Ireland","Belgium","Netherland"))
 
 library(nnet)
-
-
-
-#rain cluster ID
-rev<-1
-
-#wind cluster ID
-wev<-1
-
-evp<-metaHar$ev
-eventa<-metavHar[which(metavHar$cluster==rev),]
-
-com8<-compound[which(compoundfinalST$ev1==rev),]
-com9<-com8[c(16,21)]
-comr=strsplit(as.character(com9$maxlocsR)," ")
-comRri<-as.data.frame(matrix(unlist(comr),ncol=2,byrow=T))
-com9$lonR<-as.numeric((comRri[,1]))
-com9$latR<-as.numeric((comRri[,2]))
-
-comw=strsplit(as.character(com9$maxlocsW)," ")
-comWi<-as.data.frame(matrix(unlist(comw),ncol=2,byrow=T))
-com9$lonW<-as.numeric((comWi[,1]))
-com9$latW<-as.numeric((comWi[,2]))
-
-ppr<-aggregate(list(ri=eventa[,4]),
-               by = list(loc=eventa[,8]),
-               FUN = function(x) c(length=length(x)))
-ppr <- do.call(data.frame, ppr)
-
-evento<-metatest[which(metatest$ev1==rev),]  
-evento$len=ppr$ri
-Rr=strsplit(as.character(evento$loc)," ")
-Rri<-as.data.frame(matrix(unlist(Rr),ncol=2,byrow=T))
-evento$lon<-as.numeric((Rri[,1]))
-evento$lat<-as.numeric((Rri[,2]))
-  
-cps<-metaHaf$ev
-eventi<-metavHaf[which(metavHaf$cluster==wev),]
-
-ppw<-aggregate(list(ri=eventi[,4]),
-               by = list(loc=eventi[,8]),
-               FUN = function(x) c(length=length(x),max=max(x)))
-ppw <- do.call(data.frame, ppw)
-Rw=strsplit(as.character(ppw$loc)," ")
-Rwi<-as.data.frame(matrix(unlist(Rw),ncol=2,byrow=T))
-ppw$lon<-as.numeric((Rwi[,1]))
-ppw$lat<-as.numeric((Rwi[,2]))
-
-oula<-sp03[which(sp03$ev.y== rev & sp03$ev.x==wev),]
-oulai<-unique(oula$loc)
-
-
-Ro=strsplit(as.character(oulai)," ")
-Roi<-as.data.frame(matrix(unlist(Ro),ncol=2,byrow=T))
-oulai<-as.data.frame(oulai)
-oulai$lon<-as.numeric((Roi[,1]))
-oulai$lat<-as.numeric((Roi[,2]))
-oulai$gr=1
-cof<-c()
-com<-c()
-for (lat in unique(oulai$lat)){
-elpmin<-min(oulai$lon[which(oulai$lat==lat)])
-elpmax<-max(oulai$lon[which(oulai$lat==lat)])
-coo<-c(elpmin,lat)
-coa<-c(elpmax,lat)
-cof<-rbind(cof,coo)
-com<-rbind(com,coa)
-}
-
-cof[,1]
-cof<-data.frame(cof)
-cof$gr=1
-com<-data.frame(com)
-com$gr=1
-cop<-c(-2,48)
-cok<-c(-6,48)
-comic<-rbind(cop,com[order(com[,1]),],cof[order(cof[,1],decreasing = T),],cok)
-
-
-
-##############################Plots######################## 
-
 ukk<- gSimplify(mapUK, tol=0.001, topologyPreserve=TRUE)
 uk_fort <- ggplot2::fortify(ukk)
 longlims=c(-6, 2)
@@ -245,8 +229,6 @@ lagl<-c(48,48.25,58.75,59)
 garea<-lagrid[which(!is.na(match(lagrid$Var1,logl)) | !is.na(match(lagrid$Var2,lagl))),]
 length(garea[,1])/length(lagrid[,1])
 
-solorain<-evento[-match(oulai$oulai,evento$loc),]
-solowind<-ppw[-match(oulai$oulai,ppw$loc),]
 library(ggalt)
 library(ggnewscale)
 
@@ -257,104 +239,285 @@ longlims=c(-5.7,1.7)
 latlims=c(48.4,58.5)
 
 
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "lemonchiffon1", color = "gray10", size = 1,alpha=.9) +
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
 
-  geom_point(data=evento,aes(x=lon,y=lat,size=len,col=len.sum, group=loc),alpha=.9)+
-  scale_color_gradientn(trans=scales::modulus_trans(1),colors=bs.palette(100),"ra [mm]",limits=c(1,80))+
-  new_scale_color() +
 
-  geom_point(data=ppw,aes(x=lon,y=lat,size=ri.length,col=ri.max, group=loc),shape=18,alpha=.8)+
 
-  scale_color_gradientn(trans=scales::modulus_trans(.5),colors=bs.palette2(100),"w a [m/s]",limits=c(17,50))+
+#only rain, only wind or compound events can be tested here
+listloop<-data.frame(ana=c(1,1,1,2,2,2,3,3,3),si=c(1,2,3,1,2,3,1,2,3))
+plotout<-list()
+for (ide in 1:9){
+ana=listloop$ana[ide]
+si=listloop$si[ide]
+if (ana == 1){
+  #rain cluster ID
+  rev<-egr$ev[si]}
+if (ana == 2){
+  #wind cluster ID
+  wev<-egw$ev[si]}
+if (ana == 3){
+#for compound events 
+idcom=egc$id[si]
+rev=as.numeric(unlist(strsplit(compound$combin[idcom]," "))[1])
+wev=as.numeric(unlist(strsplit(compound$combin[idcom]," "))[2])
+
+# looking for non-exclusive clusters
+  if (si==3){
+    rev=compound$ev1[which(compound$ev2==wev)]
+    idcom=compound$id[which(!is.na(match(compound$ev1,rev)))]
+  }
+# wev=compound$ev2[which(compound$ev1==rev)]
+}
+
+
+if (ana == 1 | ana == 3)
+{
+  #extraction of rain event
+  evp<-metaHar$ev
+  if(length(rev)>1){
+    # evrain=list()
+    # pprl=list()
+    evrp=c()
+    for (e in 1:length(rev)){
+      evrain<-metavHar[which(metavHar$cluster==rev[e]),] 
+      evrp=rbind(evrp,evrain)}
+      #cumulated precipitation on the footprint
+    ppr<-aggregate(list(ri=evrp[,4]),
+                         by = list(loc=evrp[,8],ev=evrp$cluster),
+                         FUN = function(x) c(length=length(x)))
+    ppr<- do.call(data.frame, ppr)
+    evento<-metatest[which(!is.na(match(metatest$ev1,rev))),]
+    eventa<-metavHar[which(!is.na(match(metavHar$cluste,rev))),] 
+  }
+  if(length(rev)==1){
+  eventa<-metavHar[which(metavHar$cluster==rev[1]),] 
+  #cumulated precipitation on the footprint
+  ppr<-aggregate(list(ri=eventa[,4]),
+                 by = list(loc=eventa[,8]),
+                 FUN = function(x) c(length=length(x)))
+  ppr <- do.call(data.frame, ppr)
   
-  scale_size(trans=scales::modulus_trans(1),limits=c(1,30),range=c(.5,5),"Duration [h]",
-             guide = guide_legend(override.aes = list(colour = alpha("grey",.8))))+
- 
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "transparent", colour = "grey50"),
-        legend.title = element_text(size=18),
-        panel.border = element_rect(colour = "black", fill=NA, size=1),
-        legend.text = element_text(size=14),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
+  evento<-metatest[which(metatest$ev1==rev[1]),]  
+  }
+
+# #use metatest which also includes timesteps when precipitation is below the threshold
+# 
+evento$len=ppr$ri
+Rr=strsplit(as.character(evento$loc)," ")
+Rri<-as.data.frame(matrix(unlist(Rr),ncol=2,byrow=T))
+evento$lon<-as.numeric((Rri[,1]))
+evento$lat<-as.numeric((Rri[,2]))
+}
+
+if (ana == 2 | ana == 3)
+  {
+
+
+#extraction of wind event  
+cps<-metaHaf$ev
+eventi<-metavHaf[which(metavHaf$cluster==wev),]
+
+ppw<-aggregate(list(ri=eventi[,4]),
+               by = list(loc=eventi[,8]),
+               FUN = function(x) c(length=length(x),max=max(x)))
+ppw <- do.call(data.frame, ppw)
+Rw=strsplit(as.character(ppw$loc)," ")
+Rwi<-as.data.frame(matrix(unlist(Rw),ncol=2,byrow=T))
+ppw$lon<-as.numeric((Rwi[,1]))
+ppw$lat<-as.numeric((Rwi[,2]))
+}
 
 
 
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "lemonchiffon1", color = "gray10", size = 1,alpha=.9) +
-  coord_map(xlim = longlims,  ylim = latlims, proj="albers",lat0=(50),lat1=(55))+
+#identifying compound hazard
+if(ana == 3){
+oula<-sp03[which(!is.na(match(sp03$ev.y,rev)) & !is.na(match(sp03$ev.x,wev))),]
+oula$combin=paste(oula$ev.x,oula$ev.y)
+oulai<-aggregate(list(c=oula[,5]),
+                by = list(loc=oula[,2]),
+                FUN = function(x) c(id=unique(x)))
+oulai <- do.call(data.frame, oulai)
 
- 
-  scale_color_gradientn(trans=scales::modulus_trans(1),colors=bs.palette(100),"ra [mm]",limits=c(1,50))+
-  new_scale_color() +
+# oulai<-unique(oula$loc)
+Ro=strsplit(as.character(oulai$loc)," ")
+Roi<-as.data.frame(matrix(unlist(Ro),ncol=2,byrow=T))
+oulai<-as.data.frame(oulai)
+oulai$lon<-as.numeric((Roi[,1]))
+oulai$lat<-as.numeric((Roi[,2]))
+oulai$gr=1
+solorain<-evento[-match(oulai$loc,evento$loc),]
+solowind<-ppw[-match(oulai$loc,ppw$loc),]
+
+
+rrww=rbind(eventa,eventi)
+rrwwm<-which(!is.na(match(rrww$cloc,as.character(oulai$loc))))
+rrwwx= rrww[rrwwm,]
+doublo<-aggregate(list(len=rrwwx[,3]),
+                by = list(loc=rrwwx[,8],time=rrwwx[,6]),
+                FUN = function(x) c(length=length(x)))
+doublo <- do.call(data.frame, doublo)
+
+rrwwd<-aggregate(list(len=doublo[,3]),
+                  by = list(loc=doublo[,1]),
+                  FUN = function(x) c(length=length(x)))
+rrwwd <- do.call(data.frame, rrwwd)
+
+oulai$len.d=rrwwd$len
+}
+
+####Plots of events
+
+##Plot of spatial footprints
+
+if (ana==3){
+  if(length(rev>1)){
+  plotout[[ide]]<-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+    geom_polygon(fill = "snow1", color = "gray10", size = 1,alpha=.9) +
+    coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+    geom_tile(data=solorain,aes(x=lon,y=lat,group=ev1),alpha=.2,fill="blue")+
+    geom_tile(data=solowind,aes(x=lon,y=lat,group=loc),alpha=.3,fill="orange")+
+    geom_tile(data=oulai,aes(x=lon,y=lat,group=gr,color=c),alpha=.2,fill="chartreuse4",lwd=0.4)+
+    geom_point(data=solorain,aes(x=lon,y=lat,size=len, group=loc),alpha=.8,col="blue")+
+    geom_point(data=solowind,aes(x=lon,y=lat,size=ri.length, group=loc),alpha=.8,col="orange")+
+    geom_point(data=oulai,aes(x=lon,y=lat,size=len.d, group=gr),alpha=.8,col="chartreuse4")+
+    
+     scale_color_manual(values=c("darkred","purple","peru","pink"),"Cluster",guide=FALSE)+
+    
+    scale_size(trans=scales::modulus_trans(1.5),limits=c(1,30),range=c(.5,3.5),  breaks = c(5,10,15),"Duration [h]",
+               guide=FALSE)+
   
-  geom_point(data=ppw,aes(x=lon,y=lat,size=ri.length,col=ri.max, group=loc),shape=18,alpha=.8)+
+     theme(axis.text=element_text(size=16),
+           plot.title = element_text(size=18,face="bold"),
+          axis.title=element_text(size=18,face="italic"),
+          panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
+          legend.title = element_text(size=18),
+          panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5),
+          panel.border = element_rect(colour = "black", fill=NA, size=1),
+          legend.text = element_text(size=14),
+          legend.key = element_rect(fill = "transparent", colour = "transparent"),
+          legend.key.size = unit(1, "cm"))+
+    labs(title= paste0("Cluster C",idcom[1],"\nCluster C",idcom[2]),color=c("darkred","purple","peru","pink")) + 
+    scale_y_continuous(
+      breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+    scale_x_continuous(
+      breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+  }
+  if (length(rev==1)){
+    plotout[[ide]]<-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+      geom_polygon(fill = "snow1", color = "gray10", size = 1,alpha=.9) +
+      coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+      geom_tile(data=solorain,aes(x=lon,y=lat,group=ev1),alpha=.2,fill="blue")+
+      geom_tile(data=solowind,aes(x=lon,y=lat,group=loc),alpha=.2,fill="orange")+
+      geom_tile(data=oulai,aes(x=lon,y=lat,group=gr,color=c),alpha=.2,fill="chartreuse4",lwd=0.4)+
+      geom_point(data=solorain,aes(x=lon,y=lat,size=len, group=loc),alpha=.8,col="blue")+
+      geom_point(data=solowind,aes(x=lon,y=lat,size=ri.length, group=loc),alpha=.8,col="orange")+
+      geom_point(data=oulai,aes(x=lon,y=lat,size=len.d, group=gr),alpha=.8,col="chartreuse4")+
+      
+      scale_color_manual(values=c("darkred","purple","peru","pink"),"Cluster",guide=FALSE)+
+      
+      scale_size(trans=scales::modulus_trans(1.5),limits=c(1,30),range=c(.5,3.5),  breaks = c(5,10,15),"Duration [h]",
+                 guide=FALSE)+
+      
+      theme(axis.text=element_text(size=16),
+            plot.title = element_text(size=18,face="bold"),
+            axis.title=element_text(size=18,face="italic"),
+            panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
+            legend.title = element_text(size=18),
+            panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5),
+            panel.border = element_rect(colour = "black", fill=NA, size=1),
+            legend.text = element_text(size=14),
+            legend.key = element_rect(fill = "transparent", colour = "transparent"),
+            legend.key.size = unit(1, "cm"))+
+      labs(title= paste0("Cluster C",idcom[1]),color=c("darkred","purple","peru","pink")) + 
+      scale_y_continuous(
+        breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+      scale_x_continuous(
+        breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+    
+  }
+}
 
-   scale_color_gradientn(trans=scales::modulus_trans(.5),colors=bs.palette2(100),expression(paste("wa [m s"^"-1","]")),limits=c(17,40))+
+if (ana ==1 | ana==2){
+  if (ana==1)
+  {
+     evento=evento
+     
+     plotout[[ide]]<-
+       ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+       geom_polygon(fill = "snow1", color = "gray10", size = 1,alpha=.9) +
+       coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+       geom_tile(data=evento,aes(x=lon,y=lat,group=ev1),alpha=.2,fill="blue")+
+       geom_point(data=evento,aes(x=lon,y=lat,size=len, group=loc),alpha=.8,col="blue")+
   
-  scale_size(trans=scales::modulus_trans(1),limits=c(1,30),range=c(.5,5),"Duration [h]",
-             guide = guide_legend(override.aes = list(colour = alpha("grey",.8))))+
+       scale_color_manual(values=c("darkred","purple","peru","pink"))+
+       
+       scale_size(trans=scales::modulus_trans(1.5),limits=c(1,30),range=c(.5,3.5),  breaks = c(5,10,15),"Duration [h]",
+                  guide=FALSE)+
+       
+       theme(axis.text=element_text(size=16),
+             plot.title = element_text(size=18,face="bold"),
+             axis.title=element_text(size=18,face="italic"),
+             panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
+             legend.title = element_text(size=18),
+             panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5),
+             panel.border = element_rect(colour = "black", fill=NA, size=1),
+             legend.text = element_text(size=14),
+             legend.key = element_rect(fill = "transparent", colour = "transparent"),
+             legend.key.size = unit(1, "cm"))+
+       labs(title= paste0("Cluster R",rev)) + 
+       scale_y_continuous(
+         breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+       scale_x_continuous(
+         breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+     
+   }
+  if (ana==2)
+  {
+    evento=ppw
+    
+    plotout[[ide]]<-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+      geom_polygon(fill = "snow1", color = "gray10", size = 1,alpha=.9) +
+      coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
+      geom_tile(data=evento,aes(x=lon,y=lat,group=loc),alpha=.2,fill="orange")+
+      geom_point(data=evento,aes(x=lon,y=lat,size=ri.length, group=loc),alpha=.8,col="orange")+
+      
+      scale_color_manual(values=c("darkred","purple","peru","pink"))+
+      
+      scale_size(trans=scales::modulus_trans(1.5),limits=c(1,30),range=c(.5,3.5),  breaks = c(5,10,15),"Duration [h]",
+                 guide = FALSE)+
+      
+      theme(plot.title = element_text(size=18,face="bold"),
+            axis.text=element_text(size=16),
+            axis.title=element_text(size=18,face="italic"),
+            panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
+            legend.title = element_text(size=18),
+            panel.border = element_rect(colour = "black", fill=NA, size=1),
+            panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5),
+            legend.text = element_text(size=14),
+            legend.key = element_rect(fill = "transparent", colour = "transparent"),
+            legend.key.size = unit(1, "cm"))+
+      labs(title= paste0("Cluster W",wev)) + 
+      scale_y_continuous(
+        breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+      scale_x_continuous(
+        breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+    
+  }
+}
 
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "transparent", colour = "grey50"),
-        legend.title = element_text(size=18),
-        panel.border = element_rect(colour = "black", fill=NA, size=1),
-        legend.text = element_text(size=14),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude")
+}
 
 
+wrap_plots(plotout)
 
-
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "lemonchiffon1", color = "gray10", size = 1,alpha=.9) +
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
-  geom_raster(data=oulai,aes(x=lon,y=lat,group=gr),alpha=.7,fill="chartreuse4")+
-  geom_raster(data=solorain,aes(x=lon,y=lat,group=ev1),alpha=.7,fill="blue")+
-  geom_raster(data=solowind,aes(x=lon,y=lat,group=loc),alpha=.7,fill="orange")+
-
-  geom_point(data=com9,aes(x=lonR,y=latR,size=1, group=maxlocsW),colour="darkblue",alpha=1, size=4)+
-  geom_point(data=com9,aes(x=lonW,y=latW,size=1, group=maxlocsW),colour="darkred",fill="darkred",alpha=1, size=4,shape=23)+
-  scale_color_gradientn(trans=scales::modulus_trans(1),colors=bs.palette(100),"ra [mm]",limits=c(1,50))+
-  new_scale_color() +
-  
-   scale_color_gradientn(trans=scales::modulus_trans(.5),colors=bs.palette2(100),expression(paste("wa [m s"^"-1","]")),limits=c(17,40))+
-  
-  scale_size(trans=scales::modulus_trans(1),limits=c(1,30),range=c(.5,5),"Duration [h]",
-             guide = guide_legend(override.aes = list(colour = alpha("grey",.8))))+
-
-   theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "transparent", colour = "grey50"),
-        legend.title = element_text(size=18),
-        panel.border = element_rect(colour = "black", fill=NA, size=1),
-        legend.text = element_text(size=14),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
-
-
-
-
-Rcar$V3=jitter(Rcar$V1,factor=3)
-Rcar$V4=jitter(Rcar$V2,factor=3)
-Rcor$V3=jitter(Rcor$V1,factor=5)
-Rcor$V4=jitter(Rcor$V2,factor=5)
+nf <- layout(matrix(c(1,1,1,2,3,4,5,6,7,8,9,10),4,3,byrow=TRUE),c(1,1,1,1),c(1.5,5,5,5))
+# layout.show(nf)
+par(mar = c(0.5,1,0.5,1))
+# plot.new()
+# text(0.5,1,pos = 1,t,cex = 1.3,font =4)
+par(mar = c(.5,.5,0.5,0.5))
+for (pi in 1:9){
+  plot(plotout[[pi]])
+}
 
 
 ##################### clustering by event centre ###########################
@@ -413,9 +576,7 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   stat_density_2d(data=Rcas,aes(x=V1,y=V2,group=1,fill = stat(density)),geom = "raster", contour = FALSE,alpha=.6,n=300)
 
 
-
-#####################traditional hotspot################
-
+#######Identification of hotspots for compound hazards#######
 #loading subset of compound
 load("out/CompoundRW_79-19.ME2.Rdata")
 
@@ -424,7 +585,8 @@ sp03$combin=paste(sp03$ev.y,sp03$ev.x)
 kaka<-which(!is.na(match(sp03$combin,compoundX$combin)))
 length(kaka)/length(sp03$combin)
 sp04<-sp03[kaka,]
-focus="major"
+
+# focus="major"
 if(focus=="major"){
   sp03=sp04
 }
@@ -451,11 +613,14 @@ allprec<-sp03
 
 allprec$month=month(allprec$dd) 
 allprec$year=year(allprec$dd) 
+
+#defining seasons
 allprec$season=1
 allprec$season[which(allprec$month<6 & allprec$month>2)]=2
 allprec$season[which(allprec$month<10 & allprec$month>5)]=3
 allprec$season[which(allprec$month<12& allprec$month>9)]=4
 
+#defining groups AMJJA vs SONDJF
 allprec$sgroup=1
 allprec$sgroup[which(allprec$month<10 & allprec$month>3)]=2
 
@@ -468,18 +633,18 @@ nwo3$sgroup[which(month(nwo3$dd)<10 & month(nwo3$dd)>3)]=2
 allprec$evxy=paste(allprec$ev.x,allprec$ev.y,sep=" ")
 a=1
 
-tesp<-aggregate(list(len=allprec[which(allprec$sgroup==a),3]),
-                by = list(loc=allprec[which(allprec$sgroup==a),2]),
+tesp<-aggregate(list(len=allprec[,3]),
+                by = list(loc=allprec[,2]),
                 FUN = function(x) c(length=length(unique(x))))
 tesp <- do.call(data.frame, tesp)
 
-aggregR<-aggregate(list(len=nvo3[which(nvo3$sgroup==a),3]),
-                   by = list(loc=nvo3[which(nvo3$sgroup==a),2]),
+aggregR<-aggregate(list(len=nvo3[,3]),
+                   by = list(loc=nvo3[,2]),
                    FUN = function(x) c(length=length(unique(x))))
 aggregR <- do.call(data.frame, aggregR) 
 
-aggregW<-aggregate(list(len=nwo3[which(nwo3$sgroup==a),3]),
-                   by = list(loc=nwo3[which(nwo3$sgroup==a),2]),
+aggregW<-aggregate(list(len=nwo3[,3]),
+                   by = list(loc=nwo3[,2]),
                    FUN = function(x) c(length=length(unique(x))))
 aggregW <- do.call(data.frame, aggregW) 
 
@@ -490,76 +655,10 @@ windval<-inner_join(allprec, meta)
 
 length(allprec$sgroup[which(allprec$sgroup==a)])/length(allprec$sgroup)
 
-omshit<-aggregate(allprec[which(allprec$sgroup==a),1] ,
-                         by = list(loc=allprec[which(allprec$sgroup==a),2],y=allprec$year[which(allprec$sgroup==a)]),
+omshit<-aggregate(allprec[,1] ,
+                         by = list(loc=allprec[,2],y=allprec$year),
                          FUN = function(x) c(n =length(unique(x)),l=length(x)))
 omshit <- do.call(data.frame, omshit)
-
-###Need to comment all these... wtf
-
-omgNew<-aggregate(allprec$evxy ,
-                  by = list(loc=allprec[,2],m=allprec$month),
-                  FUN = function(x) c(n =length(unique(x)),l=length(x)))
-omgNew <- do.call(data.frame, omgNew)
-
-omgNew2<-aggregate(list(a=omgNew$x.l) ,
-                  by = list(loc=omgNew$loc),
-                  FUN = function(x) c(n =max(x)))
-omgNew2 <- do.call(data.frame, omgNew2)
-
-ccr<-match(omgNew2$a,omgNew$x.l)
-moismax=c()
-for (xx in unique(omgNew2$loc)){
-  laloc<-omgNew[which(omgNew$loc==xx),]
-  lemois<-unique(laloc$m[which(laloc$x.l==max(laloc$x.l))])
-  print(lemois)
-  moismax<-c(moismax,lemois[1])
-}
-
-maxm<-data.frame(omgNew2,moismax)
-
-locus<-strsplit(maxm$loc," ")
-locus<-as.data.frame(matrix(unlist(locus),ncol=2,byrow=T))
-maxm$lon<-as.numeric((locus[,1]))
-maxm$lat<-as.numeric((locus[,2]))
-maxm$grp=1
-rgb.palette=colorRampPalette(c("lightblue", 
-                               "royalblue","orange","red","purple"),interpolate="linear",bias=1)
-
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "white", color = "gray10", size = 1) +
-  theme_bw(16)+
-  # scale_fill_gradientn(colours = rgb.palette(100),"Total hours in a CE",breaks=breaks_extended(5),limits=c(min(locav$x)-0.1*min(locav$x),max(locav$x)+.1*min(locav$x)))+
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
-  geom_raster(data=locav,aes(x=lon,y=lat,fill=tcom,group=loc),interpolate = F,alpha=.7)+
-  scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100)," ",breaks=breaks_extended(5),limits=c(0,16))+
-  # scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100),"LMF",breaks=breaks_extended(5),limits=c(0,.015))+
-  labs(y = "Latitude",x = "Longitude",fill= "Total hours in a CE",size=20)+
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "grey50"),
-        legend.title = element_text(angle=0,size=18),
-        legend.text = element_text(angle=0,size=14),
-        legend.position = "right",
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
-guides(fill = guide_legend())
-
-
-
-
-worstY<-aggregate(list(n=omshit$x.l) ,
-                  by = list(loc=omshit$loc), 
-                  FUN = function(x) c(n =length(unique(x)),m=max(x)))
-worstY <- do.call(data.frame,worstY)
-
-omrd<-match(paste(worstY$n.m,worstY$loc) ,paste(omshit$x.l,omshit$loc))
-worstY$year<-omshit$y[omrd]
-locav=worstY
 
 
 locav<-aggregate(list(me=omshit[,4]) ,
@@ -568,17 +667,22 @@ locav<-aggregate(list(me=omshit[,4]) ,
 locav <- do.call(data.frame, locav)
 
 
-locav<-aggregate(allprec[,1] ,
-                       by = list(loc=allprec[,2]),
-                       FUN = function(x) c(me =length(x)))
+# locav<-aggregate(allprec[,1] ,
+#                        by = list(loc=allprec[,2]),
+#                        FUN = function(x) c(me =length(x)))
 
 ########Locav for hotspots#####################
+
+
+#the locav dataframe contains spatial information about:
+#1. Hotspots for compound hazards (Figure 5.)
+#2. Likelihood multiplication factor (Figure 5.)
+#3. Proportion of compound events in wind and rain events (Appendix H)
 
 locav$tcom1=tesp$len/ttstep
 locav$cdens1=locav$tcom1/max(locav$tcom1)
 locav$densdif=locav$tcom/locav$tcom1
 
-####work on this######
 
 locav=tesp
 locav$loc<-as.character(locav$loc)
@@ -607,51 +711,6 @@ latlims=c(48.4,58.5)
 max(locav$mult)
 locav$cdens=locav$tcom/max(locav$tcom)
 
-
-rgb.palette=colorRampPalette(c("lightblue", 
-                               "royalblue","orange","red","purple"),interpolate="linear",bias=1)
-
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "white", color = "gray10", size = 1) +
-  theme_bw(16)+
-  # scale_fill_gradientn(colours = rgb.palette(100),"Total hours in a CE",breaks=breaks_extended(5),limits=c(min(locav$x)-0.1*min(locav$x),max(locav$x)+.1*min(locav$x)))+
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
-  # geom_raster(data=locav,aes(x=lon,y=lat,fill=tcom,group=loc),interpolate = F,alpha=.7)+
-  geom_contour_fill(data=locav,aes(x=lon,y=lat,z = densdif,group=grp),alpha=0.5) +
-  scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100)," ",breaks=breaks_extended(5),limits=c(0,0.6))+
-  # scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100),"LMF",breaks=breaks_extended(5),limits=c(0,.015))+
-  labs(y = "Latitude",x = "Longitude",fill= "Total hours in a CE",size=20)+
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "grey50"),
-        legend.title = element_text(angle=0,size=18),
-        legend.text = element_text(angle=0,size=14),
-        legend.position = "right",
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
-  guides(fill = guide_legend())
-
-  # geom_bin2d(data=metaHaz[[2]],aes(x=lonMW,y=latMW,group=season),alpha=.7,binwidth=c(.5,.5))+
-  # geom_density2d(data=metaHaz[[2]],aes(x=lonMW,y=latMW,group=season),alpha=.2)
-  # stat_density_2d(data=allprec,aes(x=X1,y=X2,group=season,fill = stat(density)),geom = "raster", contour = FALSE,alpha=.6,n=150)
-
-#################################SOMETHING Happens here##########################
-# load(file="out/RainEv_hdat_1979-2019.Rdata")
-load(file="out/RainEv_ldat_1979-2019.Rdata")
-load(file="out/RainEv_hdat_1979-2019.Rdata")
-# load(file="out/RainEv_metap_1979-2019.Rdata")
-metavDar=metavDaf
-metavHar=metavHaf
-# load(file="out/WindEv_hdat_1979-2019.Rdata")
-load(file="out/WindEv_ldat_1979-2019.Rdata")
-load(file="out/WindEv_hdat_1979-2019.Rdata")
-
-load(file="out/Rainev_hdatp_1979-2019.Rdata")
-
 qx<-quantile(metatest$len.sum,.9)
 metates2<-metatest[which(metatest$len.sum>=qx),]
 qw<-quantile(metavHaf$vecmeta,.9)
@@ -662,24 +721,23 @@ rmm<-c()
 wmm<-c()
 for(bx in 1:1485)
 {
-location=locav$loc[bx]
-compbx<-sp03[which(sp03$loc==location),]
-comcr<-unique(compbx$ev.y)
-comcw<-unique(compbx$ev.x)
-rainc<-metatest[which(metatest$loc==location),]
-cx<-compound[which(!is.na(match(compound$ev1,comcr))),]
-cxx<-cx[which(!is.na(match(cx$ev2,comcw))),]
-cy<-rainc$len.sum[na.omit(match(cxx$ev1,rainc$ev))]
-rmax<-cy/cxx$rf.max.cs
-# plot(rmax)
-rmm[bx]<-mean(rmax)
-winc<-metavDaf[which(metavDaf$loc==location),]
-cw<-winc$vi.max[na.omit(match(cxx$ev2,winc$ev))]
-
-wmax<-cw/cxx$wg.max.cs
-wmm[bx]<-mean(wmax)
-proprain[bx]<-length(comcr)/length(rainc$ev)
-propwind[bx]<-length(comcw)/length(winc$ev)
+  location=locav$loc[bx]
+  compbx<-sp03[which(sp03$loc==location),]
+  comcr<-unique(compbx$ev.y)
+  comcw<-unique(compbx$ev.x)
+  rainc<-metatest[which(metatest$loc==location),]
+  cx<-compound[which(!is.na(match(compound$ev1,comcr))),]
+  cxx<-cx[which(!is.na(match(cx$ev2,comcw))),]
+  cy<-rainc$len.sum[na.omit(match(cxx$ev1,rainc$ev))]
+  rmax<-cy/cxx$rf.max.cs
+  rmm[bx]<-mean(rmax)
+  winc<-metavDaf[which(metavDaf$loc==location),]
+  cw<-winc$vi.max[na.omit(match(cxx$ev2,winc$ev))]
+  
+  wmax<-cw/cxx$wg.max.cs
+  wmm[bx]<-mean(wmax)
+  proprain[bx]<-length(comcr)/length(rainc$ev)
+  propwind[bx]<-length(comcw)/length(winc$ev)
 }
 
 locav$prain<-proprain
@@ -693,8 +751,38 @@ locav$frain=locav$prain*100
 locav$frmm<-locav$rmm*100
 locav$fwmm<-locav$wmm*100
 locav$rwmm<-rmm*wmm*100
-min(locav$fwmm)
 
+
+rgb.palette=colorRampPalette(c("lightblue", 
+                               "royalblue","orange","red","purple"),interpolate="linear",bias=1)
+
+##Plot 1##
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  geom_polygon(fill = "white", color = "gray10", size = 1) +
+  theme_bw(16)+
+  # scale_fill_gradientn(colours = rgb.palette(100),"Total hours in a CE",breaks=breaks_extended(5),limits=c(min(locav$x)-0.1*min(locav$x),max(locav$x)+.1*min(locav$x)))+
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
+  # geom_raster(data=locav,aes(x=lon,y=lat,fill=tcom,group=loc),interpolate = F,alpha=.7)+
+  geom_contour_fill(data=locav,aes(x=lon,y=lat,z = mult,group=grp),alpha=0.5) +
+  scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100)," ",breaks=breaks_extended(5))+
+  # scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100),"LMF",breaks=breaks_extended(5),limits=c(0,.015))+
+  labs(y = "Latitude",x = "Longitude",fill= "Total hours in a CE",size=20)+
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=18,face="italic"),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_text(angle=0,size=18),
+        legend.text = element_text(angle=0,size=14),
+        legend.position = "right",
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))+
+  scale_y_continuous(
+    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+  scale_x_continuous(
+    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+
+
+##Plot 2##
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   geom_polygon(fill = "white", color = "gray10", size = 1) +
   theme_bw(16)+
@@ -714,7 +802,7 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   scale_y_continuous(
     breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
   scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
+    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
 
 
 max(metavHaf$vecmeta)
@@ -770,92 +858,9 @@ vart2<-log(compoundfinalST$ORtime[which(compoundfinalST$sgroup==2)])
 t.test(vart1,vart2)
 
 boxplot(vart1 , vart2)
-#################Polat plot#####################################
-tabchoos<-compoundfinalST
-
-polarEvent<-aggregate(tabchoos$season,
-                      by = list(Month = tabchoos$x.month,Year=tabchoos$x.year),
-                      FUN = function(x) c(n =length(x)))
-polarEventR <- do.call(data.frame, polarEvent)
-polarEventR$date=as.character(paste0(polarEventR$Year,"-",sprintf("%02d", as.numeric(polarEventR$Month))))
-polarEventR$date=as.Date(paste(polarEventR$date,"-01",sep=""))
-polarEventR$monthstr=months(polarEventR$date)
-
-polarEventR$monthstr = factor(polarEventR$monthstr, levels=month.name)
-
-coord_radar <- function (theta = "x", start = 0, direction = 1) {
-  theta <- match.arg(theta, c("x", "y"))
-  r <- if (theta == "x") "y" else "x"
-  ggproto("CordRadar", CoordPolar, theta = theta, r = r, start = start, 
-          direction = sign(direction),
-          is_linear = function(coord) TRUE)
-}
 
 
-GeomSegment2 <- ggproto("GeomSegment2",
-                        GeomSegment,
-                        draw_panel = function (data, panel_params, coord, arrow = NULL,
-                                               arrow.fill = NULL, lineend = "butt", 
-                                               linejoin = "round", na.rm = FALSE) {
-                          data <- remove_missing(data, na.rm = na.rm, 
-                                                 c("x", "y", "xend", "yend", "linetype", 
-                                                   "size", "shape"), 
-                                                 name = "geom_segment")                          
-                          if (ggplot2:::empty(data)) 
-                            return(zeroGrob())
-                          # remove option for linear coordinate system
-                          data$group <- 1:nrow(data)
-                          starts <- subset(data, select = c(-xend, -yend))
-                          ends <- plyr::rename(subset(data, select = c(-x, -y)), 
-                                               c(xend = "x", yend = "y"), 
-                                               warn_missing = FALSE)
-                          pieces <- rbind(starts, ends)
-                          pieces <- pieces[order(pieces$group), ]
-                          GeomPath$draw_panel(pieces, panel_params, coord, arrow = arrow, 
-                                              lineend = lineend)
-                        })
 
-geom_segment2 <- function (mapping = NULL, data = NULL, stat = "identity", 
-                           position = "identity", ..., arrow = NULL, arrow.fill = NULL, 
-                           lineend = "butt", linejoin = "round", na.rm = FALSE, 
-                           show.legend = NA, inherit.aes = TRUE) {
-  layer(data = data, mapping = mapping, stat = stat, 
-        geom = GeomSegment2, # instead of GeomSegment
-        position = position, show.legend = show.legend, inherit.aes = inherit.aes, 
-        params = list(arrow = arrow, arrow.fill = arrow.fill, 
-                      lineend = lineend, linejoin = linejoin, na.rm = na.rm, 
-                      ...))
-}
-rbPal2<-colorRampPalette(c('skyblue',"orange","darkorange","red","purple"))
-polarEventR$gr=1
-
-data(beavers)
-plot(polarEventR[,c(1,3)])
-p <- ggplot() + 
-  geom_path(data=polarEventR, aes(x=monthstr,y=x,group=gr,colour=Year),size=.8)+
-  geom_line(data=polarEventR, aes(x=monthstr,y=x,colour = Year,group=Year),size=.8) + 
-  geom_point(data=polarEventR, aes(x=monthstr,y=x,colour = Year,group=Year),size=2)+
-  # geom_segment2(data=polarEventR,aes(x=monthstr, 
-  #                                    xend=monthstr, 
-  #                                    y=0, 
-  #                                    yend=x),color="blue")+
-  scale_colour_gradientn(colours = rbPal2(30))+
-  scale_y_continuous(name = "# of occurences")+
-  scale_x_discrete(name = "Months")
-p+ theme_bw() +coord_radar()
-
-
-camembert<-aggregate(tabchoos$ev2,
-                     by = list(season =tabchoos$season),
-                     FUN = function(x) c(n =length(x)))
-brie <- do.call(data.frame, camembert)
-brie$seasonc<-c("Winter","Spring","Summer","Autum")
-
-p1 <- ggplot(brie, aes(x = "", y =x , fill = seasonc)) + geom_bar(width = 1, stat = 'identity') + coord_polar("y", start = 0)
-p1+ scale_fill_brewer("Blues") + 
-  theme_bw() +
-  geom_text(aes(y = x/3 + c(0, cumsum(x)[-length(x)]),label = percent(x/100)), size = 5)
-print(p1)
 
 ##############################Seasonal analysis#######################################
 
@@ -990,8 +995,86 @@ rainevf$c="r"
 rainotro$c="c"
 
 
+###############################quantitative analysis wind rain compound######
+rperwind= length(matchingr)/length(matchingw)
 
-###############Quantile-space plot#############################
+
+pis=c()
+lec=c()
+for(id in (unique(compound$ev1)))
+{ pipi=length(compound$ev1[which(compound$ev1==id)])
+pis=c(pipi,pis)
+if(pipi>1){
+  lev=unique(compound$combin[which(compound$ev1==id)])
+  lec=c(lec,lev)}
+}
+
+pos=pis[which(pis>1)]
+mean(pis)
+max(pos)
+
+bcit<-compound[which(diff(compound$ev1)==0)+1,]
+length(unique(bcit$ev1))
+
+
+pes=c()
+lecu=c()
+lecru=c()
+for(id in (unique(compound$ev2)))
+{ pipi=length(compound$ev2[which(compound$ev2==id)])
+pes=c(pipi,pes)
+if(pipi>1){
+  lev=unique(compound$combin[which(compound$ev2==id)])
+  lecu=c(lecu,lev)}
+if(pipi>8){
+  lev=unique(compound$combin[which(compound$ev2==id)])
+  lecru=c(lecru,lev)}
+}
+
+mama=which(!is.na(match(lec,lecu)))
+pus<-pes[which(pes>1)]
+yoboyz<-which(!is.na(match(pus, compound$ev2)))
+mean(pes)
+mean(pis)
+max(pus)
+
+totmul=length(lec)+length(lecu)-length(mama)
+nonex=length(mama)
+nonexwind=length(lecu)-length(mama)
+nonexrain=length(lec)-length(mama)
+totex=length(compound$combin)-totmul
+
+df <- data.frame(type = c("Nonex", "Nonexwind", "Nonexrain", "Ex"),
+                 Number = c(nonex, nonexwind, nonexrain, totex))
+df$type <- factor(df$type)
+df$Share <- df$Number / sum(df$Number)
+df$ymax <- cumsum(df$Share)
+df$ymin <- c(0, head(df$ymax, n= -1))
+
+ggplot(df, aes(fill = type, ymax = ymax, ymin = ymin, xmax = 2, xmin = 1)) + geom_rect() + 
+  coord_polar(theta = "y",start=-pi/2) + xlim(c(0, 2)) + ylim(c(0,2))
+
+length(mama)+nonexrain+nonexwind+totex
+w1=length(which(pes==1))
+w2=length(which(pes==2))
+w3=length(which(pes==3))
+w4=length(which(pes>=4))
+
+r1=length(which(pis==1))
+r2=length(which(pis==2))
+r3=length(which(pis==3))
+r4=length(which(pis>=4))
+
+a=length(lecu)# number of compound events with non-exclusive wind events
+b=length(pus) #number of non-exclusive wind events
+c=length(lec)# number of compound events with non-exclusive rain events
+d=length(pos) #number of non-exclusive rain events
+
+
+
+###################Quantile-space plot############################
+
+#base for Figure 5.13
 
 quantile(metatest$len.sum,.5)
 qt=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,.95,.99)
@@ -1095,8 +1178,6 @@ ggplot(coui, aes(x = qt, y = cl, group=as.character(V2))) +
         legend.key.size = unit(1, "cm"))+
   scale_color_gradientn(colors=rgb.palette(100),na.value="white",limits=c(1,100),"Duration [h]")+
   theme(text = element_text(size=16))
-
-##########################################################
 
 
 load(file="ident_events_v5.Rdata")
@@ -1340,12 +1421,12 @@ write.csv(windevf,'windonly_79-19.csv')
 write.csv(compoundfinalST,'compoundevents_79-19.csv')
 
 
-rainevi2<-metaHar
-rainevi2$c="r"
-windevi2<-metaHaf
-windevi2$c="w"
-
-compevi<-compoundfinalST[,c(2,30,31,32,53,51)]
+rainevi<-metaHar[,c(1,8,6)]
+rainevi$c="r"
+windevi<-metaHaf[,c(1,8,6)]
+windevi$c="w"
+compoundfinalST$ID=seq(1:length(compoundfinalST$combin))
+compevi<-compoundfinalST[,c(54,53,51)]
 compevi$c="c"
 names(compevi)[1]="ev"
 names(rainevi)=names(compevi)
@@ -1355,7 +1436,7 @@ compound$year=year(compound$startime)
 compevi2<-compound[,c(2,33,34,30,28,23,24,32,25,26)]
 totevi<-rbind(compevi,rainevi,windevi)
 
-bibcase<-rainevi2
+bibcase<-rainevi
 
 bibis1<-aggregate(bibcase$season,
                   by = list(Month = bibcase$x.month),
@@ -1901,11 +1982,6 @@ legend("topright", inset = -.0,legend=round(seq(min(metaHaz[[3]]$rf.max),max(met
 
 
 
-# plot(c(0,2),c(0,1),type = 'n', axes = F,xlab = '', ylab = '', main = 'legend title')
-# text(x=1.5, y = seq(0,1,l=5), labels = round(seq(min(metaHaz[[3]]$wg.max),max(metaHaz[[3]]$wg.max),l=5)))
-# rasterImage(legend_image, 0, 0, 1,1)
-# 
-# 
 metaHaz[[1]]$rf.max[which(metaHaz[[1]]$rf.max<0)]=0
 max(metaHaz[[1]]$rf.max)
 
@@ -1929,7 +2005,10 @@ tt<-sum(metaHaf$viw.surf)+sum(metaHar$vir.surf)
 vv<-sum(windevf$viw.surf)+sum(rainevf$vir.surf)
 cc<-sum(compound$spacescale)
 cc/tt
-######################Spatiotemporal plot####################################
+
+
+######################Spatiotemporal plots#############################
+
 compoundfinalST$wg.max.s=compoundfinalS$wg.max.y
 compoundfinalST$rf.max.s=compoundfinalS$rf.max.x
 compoundfinalST$footprint=compoundfinalST$spacescale.x/1485
@@ -2131,12 +2210,8 @@ ggplot(data=compound,aes(x=footprint/100,y=ORtime,fill=rp))+
         legend.text = element_text(size=14),
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))+
-  # geom_vline(xintercept = 1,size=2,alpha=.5)+
-  # geom_hline(yintercept=54)+
-  # geom_vline(xintercept=1306)+
+
   scale_fill_gradientn(trans="log",colors=rbPal2(100),"Joint Return Period (Y)",breaks=c(1/111,.1/111,.01/111),labels = c(1,10,100))+
-  # scale_colour_manual(values = c( "blue", "red","orange","skyblue"))+
-  # scale_colour_gradientn(trans=scales::modulus_trans(1.2),colors=rbPal2(100),"Max precipitation [mm]",breaks=c(40,80,120,Inf),limits=c(1,141))+
   scale_y_continuous(trans = log_trans(),
                      breaks = c(3,6,12,24,48,72,148),limits = c(2.9,150),"Duration",
                      labels=c("3h","6h","12h","1day","2days","3days","1week"))+
@@ -2171,536 +2246,3 @@ ggplot(data=compoundfinal,aes(x=space,y=timemin,colour=abs(1/tdist),size=1/sdist
 compound$sgr<-1
 compound$sgr[which(month(compound$startime)>3 & month(compound$startime)<10)]=2
 length(compound$combin[which(compound$sgr==1)])/length(compound$combin)
-
-##############################Cell by cell= where is the most prone to hazard comb?#########################
-
-load(file="out/RainEv_metap_1979-2019.Rdata")
-metaHar=metaHaf
-load(file="out/WindEv_meta_1979-2019.Rdata")
-
-load(file="out/RainEv_ldat_1979-2019.Rdata")
-metavDar=metavDaf
-load(file="out/WindEv_ldat_1979-2019.Rdata")
-
-cellcount<-metavDar[which(!is.na(match(metavDax[[1]]$ev,compoundfinalST$ev1))),]
-cellshit<-metavHax[[1]][which(!is.na(match(metavHax[[1]]$cluster,compoundfinalST$ev1))),]
-
-length(unique(cellcount$ev))
-
-cellcount2<-metavDax[[2]][which(!is.na(match(metavDax[[2]]$ev,compoundfinalST$ev2))),]
-cellshit2<-metavHax[[2]][which(!is.na(match(metavHax[[2]]$cluster,compoundfinalST$ev2))),]
-
-ccop<-na.omit(match(metavDax[[1]]$ev,compoundfinalST$ev1))
-ccop2<-na.omit(match(metavDax[[2]]$ev,compoundfinalST$ev2))
-cellcount$megashit<-compound$combin[ccop]
-cellcount2$megashit<-compound$combin[ccop2]
-
-# cellshit$vecmeta2=NA
-# cellshit2$vecmeta=NA
-ccop<-na.omit(match(metavHax[[1]]$cluster,compoundfinalST$ev1))
-ccop2<-na.omit(match(metavHax[[2]]$cluster,compoundfinalST$ev2))
-cellshit$megashit<-compound$cev[ccop]
-cellshit2$megashit<-compound$cev[ccop2]
-
-
-
-cellshit3<-as.data.frame(rbind(cellshit,cellshit2))
-names(cellcount2)=names(cellcount)
-
-cellshit$loc=paste(cellshit$Var1,cellshit$Var2)
-cellshit2<-unique(cellshit$loc)
-
-# compand<-inner_join(cellshit,cellshit2,by=c("megashit","cloc"))
-# bib<-c()
-# for(loci in 1: length(unique(compand$cloc))){
-#   local<-unique(compand$cloc)[loci]
-# trial<-compand[which(compand$cloc==local),]
-# trial2<-trial[order(trial$cloc),]
-# # trial2<-trial2[which(trial2$cloc=="-4 57"),]
-# dt<-difftime(trial2$time.x,trial2$time.y,unit="hours")
-# length(which(dt==0))
-# bib<-c(bib,median(na.omit(dt)))
-# }
-# 
-# bib<-data.frame(bib,unique(compand$cloc))
-# mbib<-match(bib$unique.compand.cloc.,compand$cloc)
-# bib<-data.frame(bib,compand[mbib,])
-
-
-cellcorr<-cellshit[na.omit(match(cellshit2,cellshit$loc)),]
-head(cellcount)
-
-
-cellcount3<-as.data.frame(rbind(cellcount,cellcount2))
-
-
-
-
-length(unique(cellcount3$ev))
-ucount<-aggregate(cellcount3[,1] ,
-                  by = list(ev=cellcount3[,7],loc=cellcount3[,2]),
-                  FUN = function(x) c(n =length(x)))
-
-ucount2<-ucount[which(ucount$x==2),]
-
-ucount3<-aggregate(sp03[,1] ,
-                   by = list(ev=sp03[,5],loc=sp03[,2]),
-                   FUN = function(x) c(n =length(x)))
-
-length(unique(cellcount3$megashit))
-sp03$sgr<-1
-sp03$cev=paste(sp03$ev.x, sp03$ev.y,sep=" ")
-
-sp03$sgr[which(month(sp03$dd)>3 & month(sp03$dd)<10)]=2
-sp03w<-sp03[which(sp03$sgr==1),]
-sp03s<-sp03[which(sp03$sgr==2),]
-
-tesp<-aggregate(list(len=sp03[,3]),
-                by = list(ev2=sp03[,1],ev1 = sp03[,4],loc=sp03[,2]),
-                FUN = function(x) c(length=length(unique(x))))
-tesp <- do.call(data.frame, tesp)
-
-tesp$cev=paste(tesp$ev1,tesp$ev2)
-
-caca<-inner_join(tesp,metatest,by=c("loc","ev1"))
-names(metavDaf)[1]="ev2"
-caca2=inner_join(caca,metavDaf,,by=c("loc","ev2"))
-bivar=caca2[,c(10,7)]
-plot(bivar)
-
-
-
-ucount2<-sp03
-ucount2$cev=paste(ucount2$ev.x, ucount2$ev.y,sep=" ")
-sp03$loc<-as.character(sp03$loc)
-
-plotmap<-list()
-locationHr<-"-0.5 51.5"
-locationSh<-"-1.5 53.5"
-locationCu<-"-2.75 54.25"
-locationGl<-"-4.25 56"
-locas<-c(locationCu,locationGl,locationSh,locationHr)
-namesloc<-c("Cumbria","Glasgow","Sheffield","London")
-for(lo in 1:4){
-
-location=locas[lo]
-
-ucouthH<-sp03[which(sp03$loc==location),]
-mates<-which(!is.na(match(sp03$cev,ucouthH$cev)))
-ucountmH<-ucount2[mates,]
-
-tip<-aggregate(list(len=ucountmH[,3]),
-                by = list(ev2=ucountmH[,1],ev1 = ucountmH[,4],loc=ucountmH[,2]),
-                FUN = function(x) c(length=length(unique(x))))
-tip <- do.call(data.frame, tip)
-
-heathrowext<-aggregate(tip[,4] ,
-                       by = list(loc=tip[,3]),
-                       FUN = function(x) c(n =sum(x), l=length(x)))
-
-heathrowext<-do.call(data.frame,heathrowext)
-heathrowext$loc=as.character(heathrowext$loc)
-
-
-Rcast=strsplit(heathrowext$loc," ")
-
-Rcas<-as.data.frame(matrix(unlist(Rcast),ncol=2,byrow=T))
-heathrowext$lon<-as.numeric((Rcas[,1]))
-heathrowext$lat<-as.numeric((Rcas[,2]))
-heathrowext$gr=1
-heathrowext$l.p<-heathrowext$x.l/max(heathrowext$x.l)
-heathrowext$n.p<-heathrowext$x.n/max(heathrowext$x.n)
-
-plotmap[[lo]]<-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  theme_bw(16)+
-  geom_raster(data=heathrowext,aes(x=lon,y=lat,fill=l.p,group=gr),interpolate = F)+
-  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
-  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
-  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
-  labs(y = "Latitude",x = "Longitude",fill= "Ps",size=20,title=namesloc[lo])+
-  theme(axis.text=element_text(size=14),
-        axis.title=element_text(size=16,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "grey50"),
-        legend.title = element_text(size=14),
-        legend.text = element_text(angle=0,size=13),
-        legend.position = "right",
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank())+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude")+
-  # scale_fill_gradientn(trans=scales::modulus_trans(1.5),colors=rbPal(100),"Max wind gust [m/s]",breaks=c(10,20,30,40,50,Inf),limits=c(5,51))+
-  scale_fill_gradientn(trans=scales::modulus_trans(1.6), colours = rgb.palette(100),limits=c(0,1))
-}
-
-lay <- rbind(c(1,1,2,2),
-             c(3,3,4,4))
-
-grid.arrange(plotmap[[1]],plotmap[[2]],plotmap[[3]],plotmap[[4]], layout_matrix = lay, top="test") 
-
-sptdurloc<-inner_join(heathrowext,compoundfinalST,by=c("combin"))
-mean(compoundfinalST$spacescale)
-mean(sptdurloc$time.y)
-bib<-c()
-for(loci in 1: length(unique(ucount2$loc))){
-  local<-unique(ucount2$loc)[loci]
-  ucouthH<-ucount2[which(ucount2$loc==local),]
-  ucouthH$cev=ucouthH$ev
-  trial<-semi_join(compoundfinalST,ucouthH,by=c("cev"))
-  ohmerd<-c(median(trial$space),median(trial$time))
-  bib<-rbind(bib,ohmerd)
-}
-
-nrow(bib)
-bib<-data.frame(bib,unique(ucount2$loc))
-mbib<-match(bib$unique.ucount2.loc.,cellshit$cloc)
-bib<-data.frame(bib,cellshit[mbib,])
-plot(bib$X1) 
-hist(compoundfinalST$space)
-median(compoundfinalST$space)
-
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  theme_bw(16)+
-  geom_raster(data=bib,aes(x=Var1,y=Var2,fill=X1,group=cluster),interpolate = F)+
-  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
-  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
-  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
-  scale_fill_gradientn(colours = rgb.palette(100))
-
-
-
-bcount<-aggregate(ucount[,3] ,
-                  by = list(loc=ucount[,2]),
-                  FUN = function(x) c(n =length(x)))
-bcount<-do.call(data.frame,bcount)
-
-bcount2<-aggregate(ucount2[,3] ,
-                   by = list(loc=ucount2[,2]),
-                   FUN = function(x) c(n =length(x)))
-bcount2<-do.call(data.frame,bcount2)
-
-bcount$loc=as.character(bcount$loc)
-bcoo1<-inner_join(bcount,cellcorr,by=c("loc"))
-
-bcount2$loc=as.character(bcount2$loc)
-bcoo2<-inner_join(bcount2,cellcorr,by=c("loc"))
-
-
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  theme_bw(16)+
-  geom_raster(data=bcoo2,aes(x=Var1,y=Var2,fill=x,group=cluster),interpolate = F)+
-  # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
-  # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
-  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
-  scale_fill_gradientn(colours = rgb.palette(100))
-
-
-#Comparison with spatial dependence method, the chi measure
-
-thr<-hazmat$Pr$data[,,1]
-for (i in (1:33)){
-  for(j in 1:45){
-    crappy<-hazmat$Pr$data[i,j,]
-    thr[i,j]<-quantile(crappy[which(crappy>0)],.99,na.rm=T)
-  }
-}
-
-thw<-hazmat$Wg$data[,,1]
-for (i in (1:33)){
-  for(j in 1:45){
-    crappy<-hazmat$Wg$data[i,j,]
-    thw[i,j]<-quantile(crappy[which(crappy>0)],.99,na.rm=T)
-  }
-}
-thrr<-as.vector(thr) 
-elonlat <- as.matrix(expand.grid(hazmat$Pr$lon,hazmat$Pr$lat))
-thrbg<-data.frame(elonlat,thrr)
-thrbg$gr=1
-thrbg$loc=paste(thrbg$Var1,thrbg$Var2)
-lolon<--0.5 
-lolat<-51.5
-lla<-which(hazmat$Pr$lat==lolat)
-llo<-which(hazmat$Pr$lon==lolon)
-localdat<-hazmat$Pr$data[llo,lla,]
-localth<-thrbg[which(thrbg$loc==location),]
-exid<-which(localdat>=localth$thrr)
-localex<-localdat[which(localdat>=localth$thrr)]
-
-empichi<-hazmat$Wg$data[,,1]
-for (i in (1:33)){
-  for(j in 1:45){
-    crappy<-hazmat$Pr$data[i,j,]
-    thw<-quantile(crappy[which(crappy>0)],.99,na.rm=T)
-    abo<-crappy[exid]
-    lex<-length(abo[which(abo>=thw)])
-    empichi[i,j]<-lex/length(exid)
-  }
-}
-
-chiemp<-as.vector(empichi) 
-elonlat <- as.matrix(expand.grid(hazmat$Pr$lon,hazmat$Pr$lat))
-chim<-data.frame(elonlat,chiemp)
-chim$gr=1
-
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  theme_bw(16)+
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.2)+
-  geom_raster(data=chim,aes(x=Var1,y=Var2,fill=chiemp,group=gr),alpha=.8,interpolate = F) +
-  scale_fill_gradientn(colours = rgb.palette(100),na.value = "aliceblue")+
-  geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "grey50"),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        legend.title = element_text(size=18),
-        legend.text = element_text(size=14),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
-
-#########################WEATHER TYPES#################
-compound$day<-as.Date(compound$startime)
-WeatherTypes=read.csv(paste0(dir.study,"/in/ERA5_1979_2018_WT_UK.csv"),sep=",",dec=".",header=T)  
-
-WeatherTypes$Date<- paste(WeatherTypes$year,WeatherTypes$month,WeatherTypes$?..day,sep= " ")
-WeatherTypes$Date = as.Date(strptime(WeatherTypes$Date ,format = "%Y%m%d"))
-wahou<-na.omit(match(compound$day,WeatherTypes$Date))
-owow<-na.omit(match(WeatherTypes$Date,compound$day))
-int<-WeatherTypes[wahou,]
-ziz<-compound[owow,]
-
-int$day=int$Date
-data2<-inner_join(int,compound,by=c("day"))
-data3<-data2[na.omit(unique(match(compound$combin,data2$combin))),]
-
-
-datowow<-aggregate(list(ev=data3$combin),
-                   by = list(lwt=data3$LWT),
-                   FUN = function(x) c(length=length(x)))
-datowow<- do.call(data.frame, datowow)
-datowow$freq=datowow$ev/length(data3$?..day)
-rowow<-aggregate(list(ev=WeatherTypes$Date),
-                   by = list(lwt=WeatherTypes$LWT),
-                   FUN = function(x) c(length=length(x)))
-rowow<- do.call(data.frame, rowow)
-rowow$freq<-rowow$ev/length(WeatherTypes$month)
-laverif<-match(data3$combin,compound$combin)
-compoundpls<-compound[match(data3$combin,compound$combin),]
-compoundpls$lwt=as.character(data3$LWT)
-hist(data3$LWT)
-hist(WeatherTypes$LWT)
-
-
-sp<-data.frame(data2$`Speed_m/s`)
-length(unique(WeatherTypes$LWT))
-summary(data2)
-lwt<-data2$`int$LWT`
-lwt<-sort(lwt)
-lwt<-lwt[-which(lwt==-1)]
-plot(lwt)
-hist(data2$`int$LWT`, breaks = 27)
-names(data2)[8]="LWT"
-
-cols <- c("8" = "red", "4" = "blue", "6" = "darkgreen", "10" = "orange")
-
-load(file="out/CompoundRW_79-19.RP.Rdata")
-load(file="out/CompoundRW_79-19.ME.Rdata")
-cols= c("-1"="white","0"="skyblue","1"="grey","2"="grey","3"="grey","4"="grey","5"="grey","6"="grey","7"="grey","8"="grey","11"="grey","12"="orange","13"="gold","14"="yellow","15"="yellowgreen","16"="green","17"="darkgreen","18"="black","20"="tomato3","21"="tomato","22"="tomato","23"="tomato", "24"="tomato","25"="tomato","26"="tomato","27"="tomato","28"="tomato") 
-ggplot(data=xtremdat,aes(x=wg.max.cs,y=rf.max.cs,color=lwt))+
-  geom_point(size=4,shape=19,alpha=0.7)+
-  
-  # scale_fill_gradientn(colours = rbPal2(30))+
-  # scale_fill_gradientn(na.value = "gray95" ,trans="log",colors=rbPal2(100),"Joint Return Period (Y)",breaks=c(1/111,.1/111,.01/111),labels = c(1,10,100))+
-  scale_colour_manual(values = cols)+
-  # ggplot(data=metaHar,aes(x=footprint,y=x.dur,fill=vir.max,size=len.max))+
-  # geom_point(shape=21)+
-  theme(axis.text=element_text(size=18),
-        axis.title=element_text(size=20,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "black",size=1),
-        legend.title = element_text(size=20),
-        legend.text = element_text(size=18),
-        axis.line = element_line(colour = "black"),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        panel.border = element_rect(colour = "black", fill=NA, size=1),
-        legend.key.size = unit(1, "cm"))+
-  geom_line(data=inil, aes(x=X1,y=X2),size=2,color="lightblue4",alpha=.7)+
-  scale_x_continuous(limits=c(17,50),expression(paste("w" ['a']," [m s "^-1,"]")))+
-  scale_y_continuous(expression(paste("r" [a]," [mm]")),breaks=c(0,25,50,75,100,125,150))
-
-
-xtremdat<-compoundpls[which(!is.na(compoundpls$rp)),]
-
-powow<-aggregate(list(ev=xtremdat$combin),
-                 by = list(lwt=xtremdat$lwt),
-                 FUN = function(x) c(length=length(x)))
-powow<- do.call(data.frame, powow)
-powow$freq=powow$ev/222
-ggplot(data3, aes(x=LWT)) + geom_histogram(binwidth=1)
-plot(data3$wg.max.cs,data3$rf.max.cs,col=data3$LWT[which(data3$LWT>=0)], pch=16,col=rgb.palette())
-compoundpls$lwtn<-as.numeric(compoundpls$lwt)
-compoundpls$mainfam=0
-compoundpls$mainfam[which(compoundpls$lwtn>=20)]=2
-compoundpls$mainfam[which(compoundpls$lwtn<18 & compoundpls$lwtn>14)]=1
-compoundpls$mainfam[which(compoundpls$lwtn<10)]=3
-
-ggplot(data=xtremdat,aes(x=footprint,y=ORtime,color=lwt)) +
-  # geom_pointdensity(size=3,adjust = 1,shape=16,method="kde2d") + scale_color_viridis_c(option="magma")+
-  geom_point(size=4,alpha=.6 ,shape=16) + 
-  scale_colour_manual(values = cols)+
-  theme(axis.text=element_text(size=22),
-        axis.title=element_text(size=24),
-        panel.background = element_rect(fill = "white", colour = "black",size=1),
-        panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        axis.line = element_line(colour = "black"),
-        legend.title = element_text(angle=90,size=24),
-        legend.text = element_text(size=18),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(trans = log_trans(),
-                     breaks = c(3,6,12,24,48,72,148),limits = c(1.9,150),"Duration",
-                     labels=c("3h","6h","12h","1day","2days","3days","1week"))+
-  scale_x_continuous(trans = log_trans(),
-                     breaks =c(0.1,1,10,100),limits=c(0.06,120),"Spatial footprint [%]",
-                     labels=c("0.1","1","10","100")) 
-  # geom_encircle(data=compound,aes(x=footprint,y=ORtime,group=1), size = 5, color = "darkgrey",s_shape=1.3, expand=0.03,fill=NA,alpha=.6)+
-  # geom_point(data=xtremdat,(aes(x=footprint,y=ORtime,color=lwt)), size=3,stroke=4,shape=1,alpha=.8) +
-  # # scale_colour_gradientn(trans="log",colors=rev(rbPal2(100)),"Return period (Y)",breaks=c(1,10,100))+
-  # geom_encircle(data=compoundX,aes(x=footprint,y=ORtime,group=1), size = 5, color = "red",s_shape=1.3, expand=0.03,fill=NA,alpha=.6)
-
-plot(powow$lwt,powow$freq,type="h")
-
-plot(rowow$lwt,rowow$freq,type="h")
-
-plot(datowow$lwt,datowow$freq,type="h")
-
-
-proprain<-c()
-propwind<-c()
-rmm<-c()
-wmm<-c()
-wti=c()
-for(bx in 1:1485)
-{
-  location=locav$loc[bx]
-  compbx<-sp03[which(sp03$loc==location),]
-  comcr<-unique(compbx$ev.y)
-  comcw<-unique(compbx$ev.x)
-  wt<-compoundpls[which(!is.na(match(compoundpls$combin,compbx$combin))),]
-  wtbg<-aggregate(list(ev=wt$combin),
-                     by = list(lwt=wt$lwt),
-                     FUN = function(x) c(length=length(x)))
-  wtbg<- do.call(data.frame, wtbg)
-  wtd=wtbg$lwt[which(wtbg$ev==max(wtbg$ev))]
-  wti[bx]=wtd
-  rainc<-metatest[which(metatest$loc==location),]
-  cx<-compound[which(!is.na(match(compound$ev1,comcr))),]
-  cxx<-cx[which(!is.na(match(cx$ev2,comcw))),]
-  cy<-rainc$len.sum[na.omit(match(cxx$ev1,rainc$ev))]
-  rmax<-cy/cxx$rf.max.cs
-  # plot(rmax)
-  rmm[bx]<-mean(rmax)
-  winc<-metavDaf[which(metavDaf$loc==location),]
-  cw<-winc$vi.max[na.omit(match(cxx$ev2,winc$ev))]
-  
-  wmax<-cw/cxx$wg.max.cs
-  wmm[bx]<-mean(wmax)
-  proprain[bx]<-length(comcr)/length(rainc$ev)
-  propwind[bx]<-length(comcw)/length(winc$ev)
-}
-
-locav$prain<-proprain
-locav$pwind=propwind
-locav$rmm<-rmm
-locav$wmm<-wmm
-locav$lwt=wti
-
-locav$fwind=locav$pwind*100
-locav$frain=locav$prain*100
-locav$frmm<-locav$rmm*100
-locav$fwmm<-locav$wmm*100
-locav$rwmm<-rmm*wmm*100
-min(locav$fwmm)
-
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "white", color = "gray10", size = 1) +
-  theme_bw(16)+
-  
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
-  geom_raster(data=locav,aes(x=lon,y=lat,fill = lwt,group=grp),binwidth=5,alpha=0.5) +
-  scale_fill_manual(values=cols)+
-  labs(y = "Latitude",x = "Longitude",fill= "LWT",size=20)+
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "grey50"),
-        legend.title = element_text(size=18),
-        legend.text = element_text(angle=0,size=14),
-        legend.position = "right",
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
-
-# Plot 2: Same plot with custom features
-colors_border=c(rgb(0.8,0.2,0.5,0.9) ,  rgb(0.7,0.5,0.1,0.9), rgb(0.2,0.5,0.5,0.9) )
-colors_in=c( rgb(0.8,0.2,0.5,0.4), rgb(0.7,0.5,0.1,0.4) , rgb(0.2,0.5,0.5,0.4))
-datox<-datowow[,3]
-pox<-powow[,3]
-rox<-rowow[,3]
-powow$lwt=as.numeric(powow$lwt)
-prox<-full_join(powow,rowow,by="lwt")
-prox<-full_join(prox,datowow,by="lwt")
-datmort<-t(prox[,c(3,5,7)])
-datamort<-as.data.frame(datmort)
-colnames(datamort)=as.character(prox$lwt)
-datamort<-rbind(rep(.4,27) , rep(0,27) , datamort)
-
-radarchart(datamort, axistype=4 , 
-           #custom polygon
-           pcol=colors_border , pfcol=colors_in , plwd=1 , plty=1,pty=32,
-           #custom the grid
-           cglcol="darkgrey", cglty=1, axislabcol="darkgrey", caxislabels=seq(0,60,10),calcex=1.2, cglwd=1,seg=6,
-           #custom labels
-           vlcex=1.6 
-)
-legend(x=1.2, y=0.4, legend =c("MCE","all","CE"), bty = "n", pch=20 , col=colors_in , text.col = "black", cex=1.6, pt.cex=5, y.intersp = 0.5)
-
-# Create data: note in High school for several students
-set.seed(99)
-data <- as.data.frame(matrix( sample( 0:20 , 15 , replace=F) , ncol=5))
-colnames(data) <- c("math" , "english" , "biology" , "music" , "R-coding" )
-rownames(data) <- paste("mister" , letters[1:3] , sep="-")
-
-# To use the fmsb package, I have to add 2 lines to the dataframe: the max and min of each variable to show on the plot!
-data <- rbind(rep(20,5) , rep(0,5) , data)
-
-
-
-#############sensitivity analysis#####################
-library(multisensi)
-# NOT RUN {
-## Test case : the Winter Wheat Dynamic Models (WWDM)
-#  input factors design
-data(biomasseX)
-# input climate variable
-data(Climat)
-# output variables (precalculated to speed up the example)
-data(biomasseY)
-
-# to do dynsi process
-# argument reduction=NULL
-resD <- multisensi(design=biomasseX, model=biomasseY, reduction=NULL,
-                   dimension=NULL, analysis=analysis.anoasg,
-                   analysis.args=list(formula=2,keep.outputs = FALSE))
-summary(resD)

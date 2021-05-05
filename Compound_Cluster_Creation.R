@@ -447,7 +447,7 @@ plot(compound$ORtime,compound$rf.max.h)
 
 #Compound clusters database
 save(compound,file="out/CompoundRW_79-19.v2x.Rdata")
-write.csv(compound,file="out/CompoundRW_79-19.v1.csv")
+write.csv(compoundfinalST,file="out/CompoundRW_79-19.v3.csv")
 
 comprain<-na.omit(match(metaHar$ev,compound$ev1))
 comprain2<-na.omit(match(compound$ev1,metaHar$ev))
@@ -467,6 +467,14 @@ colnames(cocow3)
 
 compoundfinalST<-data.frame(cocor3,cocow3)
 compoundfinalST<-inner_join(compoundfinalST,tscale,by=c("ev1","ev2","combin"))
+
+compoundBG<-compoundfinalST[c(1:9,37,39,23,25,46,52,54,24,26,49,60,61)]
+compoundBG$ORspace=compoundBG$vir.surf+compoundBG$viw.surf-compoundBG$spacescale.y
+
+for (ti in 1:length(compoundBG$ev2)){
+  compoundBG$ORtime[ti]<-difftime(max(compoundBG$endtimeRain[ti],compoundBG$endtimeWind[ti]),min(compoundBG$startimeRain[ti],compoundBG$startimeWind[ti]),unit="hours")+1}
+
+write.csv(compoundBG,file="out/ch5.compoundclusters.csv")
 
 names(spSCW2)[c(1,2)]<-c("ev1","ev2")
 compoundfinalS<-inner_join(spSCR,spSCW2,by=c("ev1","ev2"))
