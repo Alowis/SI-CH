@@ -58,7 +58,9 @@ sp03<-inner_join(nwo3,nvo3,by=c("loc","dd"))
 #opportunity of saving data if 1st time running code
 # save(compoundfinalST,file ="out/CompoundRW_79-19.v3x.Rdata")
 
+
 ######################01. Boxplots of spatial and temporal scales##########
+
 # For Figure 8
 
 rainevi<-metaHar[,c(1,8,6)]
@@ -76,6 +78,51 @@ mean(rainevi$spacescale.y)/1485*100
 mean(compevi$spacescale.y)/1485*100
 totevi<-rbind(compevi,rainevi,windevi)
 totevi$footprint.log=log(totevi$spacescale.y)
+
+
+totevi$rpercent=totevi$spacescale.y/1485*100
+totevi$fpercent=log(totevi$rpercent)
+length(totevi$rpercent[which(totevi$c=="w" & totevi$rpercent>.1)])
+
+# Function to use boxplot.stats for the outliers
+myout = function(x) {
+ data.frame(y=  log10(mean(10^x)))
+}
+
+myout(totevi$rpercent[which(totevi$c=="c")])
+
+log10(4633346)
+hist((totevi$rpercent[which(totevi$c=="w")]))
+
+length(totevi$rpercent[which(totevi$c=="w" & totevi$rpercent>10)])
+
+
+#spatlial scale
+ggplot(totevi, aes(x=c, y=rpercent,fill=c)) + 
+  geom_violin(trim=T,size=1,scale = "width",bw=.15)+
+  scale_fill_manual(values=c("darkgreen", "royalblue", "orange"))+
+  stat_summary(fun.data = myout, geom="point", shape=23, size=2,stroke=2)+
+  # coord_trans(y="log")+
+  scale_y_continuous(trans="log10",
+                     breaks = c(0.1,1,10,100),"Spatial footprint [%]",
+                     minor_breaks = c(0.5,5,50),
+                     labels=c("0.1","1","10","100")) +
+  scale_x_discrete("Cluster type",
+                     labels=c("Compound","Rain","Wind"))+
+  annotation_logticks(base=10,sides = "l")+
+  theme(axis.text=element_text(size=16),
+        legend.position = "none",
+        axis.title=element_text(size=18,face="italic"),
+        axis.ticks = element_line(color="black"),
+        panel.grid.major = element_line(size=1,colour = "grey80"),
+        panel.grid.minor.y = element_line(size=.4,colour = "grey90"),
+        panel.background = element_rect(fill = "transparent", colour = "grey50"),
+        legend.title = element_text(size=18),
+        panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))
+
 
 totevi$rpercent=totevi$spacescale.y/1485*100
 totevi$fpercent=log(totevi$rpercent)
@@ -141,6 +188,7 @@ ggplot(totevi, aes(x=c, y=ORtime,fill=c)) +
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))
 
+
 mean (metaHar$x.dur)
 length(metaHar$x.dur[which(metaHar$x.dur>=24)])/length(metaHar$x.dur)
 mean(metaHaf$x.dur)
@@ -153,6 +201,40 @@ qw=quantile (metaHaf$viw.surf,c(0.1,0.5,.95))
 qc=quantile (compound$spacescale,c(0.1,0.5,.95))
 
 ############################02. Event visualiser###########################
+
+#temporal scale
+ggplot(totevi, aes(x=c, y=ORtime,fill=c)) + 
+  geom_violin(trim=T,scale = "width",size=1)+
+  scale_fill_manual(values=c("darkgreen", "royalblue", "orange"))+
+  scale_x_discrete("Cluster type",
+                   labels=c("Compound","Rain","Wind"))+
+  stat_summary(fun=mean, geom="point", shape=23, size=2,stroke=2)+
+  scale_y_continuous( breaks =c(0,24,48,72,96),"Duration [h]") +
+  theme(axis.text=element_text(size=16),
+        legend.position = "none",
+        axis.title=element_text(size=18,face="italic"),
+        panel.grid.major = element_line(size=1,colour = "grey80"),
+        panel.grid.minor.y = element_line(size=.4,colour = "grey90"),
+        panel.background = element_rect(fill = "transparent", colour = "grey50"),
+        legend.title = element_text(size=18),
+        panel.border = element_rect(colour = "black", fill=NA, size=1),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))
+
+mean (metaHar$x.dur)
+length(metaHar$x.dur[which(metaHar$x.dur>=24)])/length(metaHar$x.dur)
+mean(metaHaf$x.dur)
+length(metaHaf$x.dur[which(metaHaf$x.dur>=24)])/length(metaHaf$x.dur)
+mean(compound$ORtime)
+length(compound$ORtime[which(compound$ORtime>=24)])/length(compound$ORtime)
+
+qr=quantile (metaHar$vir.surf,c(0.1,0.5,.95))
+qw=quantile (metaHaf$viw.surf,c(0.1,0.5,.95))
+qc=quantile (compound$spacescale,c(0.1,0.5,.95))
+
+############################Event visualiser###########################
+
 
 load(file="out/RainEv_hdat_1979-2019.Rdata")
 load(file="out/RainEv_ldat_1979-2019.Rdata")
@@ -357,6 +439,22 @@ solorain<-evento[-match(oulai$loc,evento$loc),]
 solowind<-ppw[-match(oulai$loc,ppw$loc),]
 
 
+
+rrww=rbind(eventa,eventi)
+rrwwm<-which(!is.na(match(rrww$cloc,as.character(oulai$loc))))
+rrwwx= rrww[rrwwm,]
+doublo<-aggregate(list(len=rrwwx[,3]),
+                by = list(loc=rrwwx[,8],time=rrwwx[,6]),
+                FUN = function(x) c(length=length(x)))
+doublo <- do.call(data.frame, doublo)
+
+
+rrwwd<-aggregate(list(len=doublo[,3]),
+                  by = list(loc=doublo[,1]),
+                  FUN = function(x) c(length=length(x)))
+rrwwd <- do.call(data.frame, rrwwd)
+
+
 rrww=rbind(eventa,eventi)
 rrwwm<-which(!is.na(match(rrww$cloc,as.character(oulai$loc))))
 rrwwx= rrww[rrwwm,]
@@ -373,7 +471,7 @@ rrwwd <- do.call(data.frame, rrwwd)
 oulai$len.d=rrwwd$len
 }
 
-####Plots of events
+
 
 ##Plot of spatial footprints
 
@@ -585,7 +683,10 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   stat_density_2d(data=Rcas,aes(x=V1,y=V2,group=1,fill = stat(density)),geom = "raster", contour = FALSE,alpha=.6,n=300)
 
 
+
 #######03. Identification of hotspots for compound hazards#######
+
+
 #loading subset of compound
 load("out/CompoundRW_79-19.ME2.Rdata")
 
@@ -679,8 +780,17 @@ locav <- do.call(data.frame, locav)
 # locav<-aggregate(allprec[,1] ,
 #                        by = list(loc=allprec[,2]),
 #                        FUN = function(x) c(me =length(x)))
+<<<<<<< HEAD:03_Compound_Analysis.R
 
 ########03. Locav for hotspots#####################
+=======
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
+
+
+#the locav dataframe contains spatial information about:
+#1. Hotspots for compound hazards (Figure 5.)
+#2. Likelihood multiplication factor (Figure 5.)
+#3. Proportion of compound events in wind and rain events (Appendix H)
 
 
 #the locav dataframe contains spatial information about:
@@ -871,7 +981,11 @@ boxplot(vart1 , vart2)
 
 
 
+<<<<<<< HEAD:03_Compound_Analysis.R
 ##############################04. Seasonal analysis#######################################
+=======
+##############################Seasonal analysis#######################################
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 
 matchingr<-which(!is.na(match(nvo3$ev,compoundfinalST$ev1)))
 matchingw<-which(!is.na(match(nwo3$ev,compoundfinalST$ev2)))
@@ -1079,9 +1193,15 @@ b=length(pus) #number of non-exclusive wind events
 c=length(lec)# number of compound events with non-exclusive rain events
 d=length(pos) #number of non-exclusive rain events
 
+<<<<<<< HEAD:03_Compound_Analysis.R
 
 
 ###################05. Quantile-space plot############################
+=======
+
+
+###################Quantile-space plot############################
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 
 #base for Figure 5.13
 
@@ -1400,6 +1520,7 @@ tesp<-aggregate(list(len=sp03[,3]),
                 FUN = function(x) c(length=length(unique(x))))
 tesp <- do.call(data.frame, tesp)
 
+<<<<<<< HEAD:03_Compound_Analysis.R
 tesp$cev=paste(tesp$ev1,tesp$ev2)
 
 caca<-inner_join(tesp,metatest,by=c("loc","ev1"))
@@ -1407,9 +1528,26 @@ names(metavDaf)[1]="ev2"
 caca2=inner_join(caca,metavDaf,,by=c("loc","ev2"))
 bivar=caca2[,c(10,7)]
 plot(bivar)
+=======
+rainevi<-metaHar[,c(1,8,6)]
+rainevi$c="r"
+windevi<-metaHaf[,c(1,8,6)]
+windevi$c="w"
+compoundfinalST$ID=seq(1:length(compoundfinalST$combin))
+compevi<-compoundfinalST[,c(54,53,51)]
+compevi$c="c"
+names(compevi)[1]="ev"
+names(rainevi)=names(compevi)
+names(windevi)=names(compevi)
+compound$year=year(compound$startime)
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 
 
+<<<<<<< HEAD:03_Compound_Analysis.R
 mapUK = SpacializedMap(database="world",regions = c("UK","France","Spain","Portugal","Italy","Ireland","Belgium","Netherland"))
+=======
+bibcase<-rainevi
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 
 library(nnet)
 ukk<- gSimplify(mapUK, tol=0.001, topologyPreserve=TRUE)
@@ -1857,6 +1995,11 @@ vivis3$pm<-vivis3$x.n/sum(vivis3$x.n)
 # bibis4$x.x[which(bibis4$Month==9)]=4
 # bibis4$c=4
 
+<<<<<<< HEAD:03_Compound_Analysis.R
+=======
+metaHaz[[1]]$rf.max[which(metaHaz[[1]]$rf.max<0)]=0
+max(metaHaz[[1]]$rf.max)
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 
 library(zoo)
 
@@ -1873,7 +2016,28 @@ ggplot(vivis3,aes(x= Month,y=Year)) +
 
 
 
+<<<<<<< HEAD:03_Compound_Analysis.R
 vivix<-full_join(vivis1,vivis2,by=c("date"))
+=======
+tt<-sum(metaHaf$viw.surf)+sum(metaHar$vir.surf)
+vv<-sum(windevf$viw.surf)+sum(rainevf$vir.surf)
+cc<-sum(compound$spacescale)
+cc/tt
+
+
+######################Spatiotemporal plots#############################
+
+compoundfinalST$wg.max.s=compoundfinalS$wg.max.y
+compoundfinalST$rf.max.s=compoundfinalS$rf.max.x
+compoundfinalST$footprint=compoundfinalST$spacescale.x/1485
+compound$footprint=compound$spacescale/1485
+metaHar$footprint=metaHar$vir.surf/1485
+bestof<-metaHaf[which(metaHaf$viw.max>45),]
+rbPal <- colorRampPalette(c('lightskyblue',"skyblue","gold","darkorange",'red',"purple"))
+# ggplot(data=compoundfinalST,aes(x=spacescale,y=ORtime,colour=wg.max.s,size=rf.max.s))+
+max(metaHax[[1]]$rf.surf)
+a=2
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 
 vivix<-full_join(vivix,vivis3,by=c("date"))
 
@@ -2126,11 +2290,22 @@ ggplot(compevi2, aes(x=factor(sgroup), y=ORtime, fill=factor(sgroup))) +
         legend.text = element_text(size=14),
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))+
+<<<<<<< HEAD:03_Compound_Analysis.R
   # geom_hline(yintercept =mean(vivis5$t),size=2, col="red")+
   theme(text = element_text(size=16))+
   labs(y = "# of occurences",x = "Season",colour = "Parameter",fill= "Season",size=20)+
   scale_x_discrete(breaks=c(1,2),labels=c("ONDJFM", "AMJJAS"))+
   scale_y_continuous(name = "Duration",trans="log",breaks = c(1,6,12,24,36,48,72))
+=======
+
+  scale_fill_gradientn(trans="log",colors=rbPal2(100),"Joint Return Period (Y)",breaks=c(1/111,.1/111,.01/111),labels = c(1,10,100))+
+  scale_y_continuous(trans = log_trans(),
+                     breaks = c(3,6,12,24,48,72,148),limits = c(2.9,150),"Duration",
+                     labels=c("3h","6h","12h","1day","2days","3days","1week"))+
+  scale_x_continuous(trans = log_trans(),
+                     breaks =c(0.001,0.01,0.1,1),limits=c(0.0006,1.2),"Spatial footprint [%]",
+                     labels=c("0.1","1","10","100")) 
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 
 totevi$spacescale.y=totevi$spacescale.y/1485
 
@@ -2158,6 +2333,7 @@ ggplot(totevi, aes(x=factor(c), y=spacescale.y, fill=factor(c))) +
   scale_y_continuous(name = "Footprint",trans="log",breaks = c(.001,.01,.1,.2,.5,.75,1),labels=c(0.1,1,10,20,50,75,100))
 
 
+<<<<<<< HEAD:03_Compound_Analysis.R
 
 
 
@@ -2594,6 +2770,8 @@ ggplot(data=compoundfinal,aes(x=space,y=timemin,colour=abs(1/tdist),size=1/sdist
                      labels=c("1000","10000","100000","1000000")) 
 
 
+=======
+>>>>>>> bdcefe8b5994316f912477ab46410df6bfe2076f:Compound_Analysis.R
 compound$sgr<-1
 compound$sgr[which(month(compound$startime)>3 & month(compound$startime)<10)]=2
 length(compound$combin[which(compound$sgr==1)])/length(compound$combin)
