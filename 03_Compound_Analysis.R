@@ -96,7 +96,7 @@ length(totevi$rpercent[which(totevi$c=="w" & totevi$rpercent>10)])
 
 #spatlial scale
 ggplot(totevi, aes(x=c, y=rpercent,fill=c)) + 
-  geom_violin(trim=T,size=1,scale = "width",bw=.15)+
+  geom_violin(trim=T,size=1,scale = "width",bw=.15,draw_quantiles = c(0.05, 0.5, 0.95))+
   scale_fill_manual(values=c("darkgreen", "royalblue", "orange"))+
   stat_summary(fun.data = myout, geom="point", shape=23, size=2,stroke=2)+
   # coord_trans(y="log")+
@@ -105,7 +105,7 @@ ggplot(totevi, aes(x=c, y=rpercent,fill=c)) +
                      minor_breaks = c(0.5,5,50),
                      labels=c("0.1","1","10","100")) +
   scale_x_discrete("Cluster type",
-                     labels=c("Compound","Rain","Wind"))+
+                   labels=c("Compound (n=4555)","Rain (n=18086)","Wind (n=6190)"))+
   annotation_logticks(base=10,sides = "l")+
   theme(axis.text=element_text(size=16),
         legend.position = "none",
@@ -123,10 +123,10 @@ ggplot(totevi, aes(x=c, y=rpercent,fill=c)) +
 
 #temporal scale
 ggplot(totevi, aes(x=c, y=ORtime,fill=c)) + 
-  geom_violin(trim=T,scale = "width",size=1)+
+  geom_violin(trim=T,scale = "width",size=1,draw_quantiles = c(0.05, 0.5, 0.95))+
   scale_fill_manual(values=c("darkgreen", "royalblue", "orange"))+
   scale_x_discrete("Cluster type",
-                   labels=c("Compound","Rain","Wind"))+
+                   labels=c("Compound (n=4555)","Rain (n=18086)","Wind (n=6190)"))+
   stat_summary(fun=mean, geom="point", shape=23, size=2,stroke=2)+
   scale_y_continuous( breaks =c(0,24,48,72,96),"Duration [h]") +
   theme(axis.text=element_text(size=16),
@@ -151,7 +151,6 @@ length(compound$ORtime[which(compound$ORtime>=24)])/length(compound$ORtime)
 qr=quantile (metaHar$vir.surf,c(0.1,0.5,.95))
 qw=quantile (metaHaf$viw.surf,c(0.1,0.5,.95))
 qc=quantile (compound$spacescale,c(0.1,0.5,.95))
-
 ############################02. Event visualiser###########################
 
 load(file="out/RainEv_hdat_1979-2019.Rdata")
@@ -162,7 +161,7 @@ load(file="out/WindEv_hdat_1979-2019.Rdata")
 load(file="out/WindEv_ldat_1979-2019.Rdata")
 load(file="out/Rainev_hdatp_1979-2019.Rdata")
 
-load(file="out/CompoundRW_79-19.v2x.Rdata")
+load(file="out/CompoundRW_79-19.v3x.Rdata")
 load(file="out/messycompound_79-19.Rdata")
 load(file="out/CompoundRW_79-19.RP.Rdata")
 
@@ -394,9 +393,9 @@ if (ana==3){
     scale_size(trans=scales::modulus_trans(1.5),limits=c(1,30),range=c(.5,3.5),  breaks = c(5,10,15),"Duration [h]",
                guide=FALSE)+
   
-     theme(axis.text=element_text(size=16),
+     theme(axis.text=element_text(size=14),
            plot.title = element_text(size=18,face="bold"),
-          axis.title=element_text(size=18,face="italic"),
+          axis.title=element_text(size=16),
           panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
           legend.title = element_text(size=18),
           panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5),
@@ -406,9 +405,9 @@ if (ana==3){
           legend.key.size = unit(1, "cm"))+
     labs(title= paste0("Cluster C",idcom[1],"\nCluster C",idcom[2]),color=c("darkred","purple","peru","pink")) + 
     scale_y_continuous(
-      breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+      breaks = c(48,50,52,54,56,58),labels= c("48°N","50°N","52°N","54°N","56°N","58°N"),limits = c(40,70),"Latitude")+
     scale_x_continuous(
-      breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+      breaks =c(-6,-4,-2,0,2),labels= c("-6°E","-4°E","-2°E","0°E","2°E"),limits=c(-10,10),"Longitude") 
   }
   if (length(rev==1)){
     plotout[[ide]]<-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
@@ -426,9 +425,9 @@ if (ana==3){
       scale_size(trans=scales::modulus_trans(1.5),limits=c(1,30),range=c(.5,3.5),  breaks = c(5,10,15),"Duration [h]",
                  guide=FALSE)+
       
-      theme(axis.text=element_text(size=16),
+      theme(axis.text=element_text(size=14),
             plot.title = element_text(size=18,face="bold"),
-            axis.title=element_text(size=18,face="italic"),
+            axis.title=element_text(size=16),
             panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
             legend.title = element_text(size=18),
             panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5),
@@ -438,9 +437,9 @@ if (ana==3){
             legend.key.size = unit(1, "cm"))+
       labs(title= paste0("Cluster C",idcom[1]),color=c("darkred","purple","peru","pink")) + 
       scale_y_continuous(
-        breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+        breaks = c(48,50,52,54,56,58),labels= c("48°N","50°N","52°N","54°N","56°N","58°N"),limits = c(40,70),"Latitude")+
       scale_x_continuous(
-        breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+        breaks =c(-6,-4,-2,0,2),labels= c("-6°E","-4°E","-2°E","0°E","2°E"),limits=c(-10,10),"Longitude")  
     
   }
 }
@@ -462,9 +461,9 @@ if (ana ==1 | ana==2){
        scale_size(trans=scales::modulus_trans(1.5),limits=c(1,30),range=c(.5,3.5),  breaks = c(5,10,15),"Duration [h]",
                   guide=FALSE)+
        
-       theme(axis.text=element_text(size=16),
+       theme(axis.text=element_text(size=14),
              plot.title = element_text(size=18,face="bold"),
-             axis.title=element_text(size=18,face="italic"),
+             axis.title=element_text(size=16),
              panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
              legend.title = element_text(size=18),
              panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5),
@@ -472,11 +471,11 @@ if (ana ==1 | ana==2){
              legend.text = element_text(size=14),
              legend.key = element_rect(fill = "transparent", colour = "transparent"),
              legend.key.size = unit(1, "cm"))+
-       labs(title= paste0("Cluster R",rev)) + 
+       labs(title= paste0("Cluster P",rev)) + 
        scale_y_continuous(
-         breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+         breaks = c(48,50,52,54,56,58),labels= c("48°N","50°N","52°N","54°N","56°N","58°N"),limits = c(40,70),"Latitude")+
        scale_x_continuous(
-         breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+         breaks =c(-6,-4,-2,0,2),labels= c("-6°E","-4°E","-2°E","0°E","2°E"),limits=c(-10,10),"Longitude") 
      
    }
   if (ana==2)
@@ -495,8 +494,8 @@ if (ana ==1 | ana==2){
                  guide = FALSE)+
       
       theme(plot.title = element_text(size=18,face="bold"),
-            axis.text=element_text(size=16),
-            axis.title=element_text(size=18,face="italic"),
+            axis.text=element_text(size=14),
+            axis.title=element_text(size=16),
             panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
             legend.title = element_text(size=18),
             panel.border = element_rect(colour = "black", fill=NA, size=1),
@@ -506,27 +505,39 @@ if (ana ==1 | ana==2){
             legend.key.size = unit(1, "cm"))+
       labs(title= paste0("Cluster W",wev)) + 
       scale_y_continuous(
-        breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+        breaks = c(48,50,52,54,56,58),labels= c("48°N","50°N","52°N","54°N","56°N","58°N"),limits = c(40,70),"Latitude")+
       scale_x_continuous(
-        breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+        breaks =c(-6,-4,-2,0,2),labels= c("-6°E","-4°E","-2°E","0°E","2°E"),limits=c(-10,10),"Longitude") 
     
   }
 }
 
 }
 
-
+library(patchwork)
 wrap_plots(plotout)
 
-nf <- layout(matrix(c(1,1,1,2,3,4,5,6,7,8,9,10),4,3,byrow=TRUE),c(1,1,1,1),c(1.5,5,5,5))
-# layout.show(nf)
-par(mar = c(0.5,1,0.5,1))
-# plot.new()
-# text(0.5,1,pos = 1,t,cex = 1.3,font =4)
-par(mar = c(.5,.5,0.5,0.5))
-for (pi in 1:9){
-  plot(plotout[[pi]])
-}
+library(grid)
+# Move to a new page
+grid.newpage()
+# Create layout : nrow = 3, ncol = 2
+pushViewport(viewport(layout = grid.layout(nrow = 3, ncol = 3)))
+# A helper function to define a region on the layout
+define_region <- function(row, col){
+  viewport(layout.pos.row = row, layout.pos.col = col)
+} 
+# Arrange the plots
+print(plotout[[1]], vp = define_region(row = 1, col = 1))   # Span over two columns
+print(plotout[[2]], vp = define_region(row = 1, col = 2))
+print(plotout[[3]], vp = define_region(row = 1, col = 3))   # Span over two columns
+print(plotout[[4]], vp = define_region(row = 2, col = 1))
+print(plotout[[5]], vp = define_region(row = 2, col = 2))   # Span over two columns
+print(plotout[[6]], vp = define_region(row = 2, col = 3))
+print(plotout[[7]], vp = define_region(row = 3, col = 1))   # Span over two columns
+print(plotout[[8]], vp = define_region(row = 3, col = 2))
+print(plotout[[9]], vp = define_region(row = 3, col = 3))  
+
+#Save as pdf with dimension 10.5 x 15 in portrait
 
 
 ##################### clustering by event centre ###########################
@@ -786,9 +797,9 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))+
   scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+    breaks = c(48,50,52,54,56,58),labels= c("48°N","50°N","52°N","54°N","56°N","58°N"),limits = c(40,70),"Latitude")+
   scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+    breaks =c(-6,-4,-2,0,2),labels= c("-6°E","-4°E","-2°E","0°E","2°E"),limits=c(-10,10),"Longitude") 
 
 
 ##Plot 2##
@@ -809,9 +820,9 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))+
   scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
+    breaks = c(48,50,52,54,56,58),labels= c("48°N","50°N","52°N","54°N","56°N","58°N"),limits = c(40,70),"Latitude")+
   scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"longitude") 
+    breaks =c(-6,-4,-2,0,2),labels= c("-6°E","-4°E","-2°E","0°E","2°E"),limits=c(-10,10),"Longitude") 
 
 
 max(metavHaf$vecmeta)
@@ -1120,7 +1131,9 @@ cev=4172 #storm angus 4286
 compound$id=c(1:length(compound$combin))
 cevc=compound$combin[which(compound$id==cev)]
 
-
+load(file="ident_events_v5.Rdata")
+validationdays<-read.csv(file=paste0(getwd(),"/csvs/identifix.csv"),header = T)
+ultim<-cbind(validationdays,retout)
 rltim=ultim[which(ultim$Dominant.hazard=="Extreme rainfall"),]
 rainid=as.vector(rltim$ID_mod)
 rix<-  strsplit(rainid, ",")
@@ -1189,7 +1202,7 @@ ggplot(coui, aes(x = qt, y = cl, group=as.character(V2))) +
   theme(text = element_text(size=16))
 
 
-load(file="ident_events_v5.Rdata")
+
 qltim=ultim[which(ultim$Dominant.hazard=="Extreme wind"),]
 windid=as.vector(qltim$ID_mod)
 wix<-  strsplit(windid, ",")

@@ -13,7 +13,7 @@ getwd()
 # setwd("C:/Users/PhD Student/OneDrive - King's College London/DATA/04_Spatiotemporal")
 # setwd("C:/Users/k1638615/King's College London/OneDrive - King's College London/DATA/04_Spatiotemporal")
 
-setwd("C:/Users/Alois/OneDrive - King's College London/DATA/04_Spatiotemporal")
+setwd("C:/Users/Alois/OneDrive - King's College London/DATA/04_Spatiotemporal/spatiotemporal_clustering")
 
 ##load libraries
 config_file=paste0(getwd(),"/config/config_general.R")
@@ -122,6 +122,7 @@ lagrid<-expand.grid(longdom,latdom)
 logl<-c(-6,-5.75,1.75,2)
 lagl<-c(48,48.25,58.75,59)
 garea<-lagrid[which(!is.na(match(lagrid$Var1,logl)) | !is.na(match(lagrid$Var2,lagl))),]
+gareax=garea
 length(garea[,1])/length(lagrid[,1])
 
 #test correctif de l'effet longlat
@@ -152,6 +153,10 @@ library(mapproj)
 optn<-mapproject(lagrid$Var1,lagrid$Var2,projection ="mercator")
 plot(optn$x,optn$y)
 
+
+
+###############Basemap - Important for all plots###########
+
 mapUK = SpacializedMap(database="world",regions = c("UK","France","Ireland"))
 plot(mapUK)
 muki<-mapUK@polygons
@@ -170,6 +175,8 @@ proj4string(ukx) <- CRS("+proj=longlat +datum=WGS84")
 plot(ukxy)
 ukxutm<-spTransform(ukxy, CRS("+proj=utm +zone=30U, +datum=WGS84"))
 
+# end of important map settings
+
 lagrid.utm <- spTransform(lagrid.coord, CRS("+proj=utm +zone=30U, +datum=WGS84"))
 garea.utm<-spTransform(garea, CRS("+proj=utm +zone=30U, +datum=WGS84"))
 plot(ukxutm)
@@ -180,7 +187,8 @@ mamamia<-fortify(ukxutm)
 
 lagfor<-data.frame(lagrid.utm@coords)
 garea.utmf<-data.frame(garea.utm)
-
+garea.longlat=spTransform(garea.utm, CRS("+proj=longlat +datum=WGS84"))
+garea.llf<-data.frame(garea.longlat)
 aziz<-data.frame(optn$x,optn$y)
 33/(optn$range[2]-optn$range[1])
 45/(optn$range[4]-optn$range[3])
@@ -208,7 +216,7 @@ scale_y_continuous("Latitude")+
   scale_x_continuous("Longitude")
 
 ########################Adding elevation background#########################
-fileele=paste0(getwd(),"/in/elev_0.1deg.nc")
+fileele="C:/Users/Alois/OneDrive - King's College London/DATA/04_Spatiotemporal/in/elev_0.1deg.nc"
 elev<-nc_open(fileele)
 name.var <- names(elev$var)
 tdims=elev$ndims
@@ -232,18 +240,17 @@ elonlat <- as.matrix(expand.grid(elevation$lon,elevation$lat))
 ele1<-as.vector(elevation$data) 
 alelu<-data.frame(elonlat,ele1)
 alelu$gr=1
+garea.llf$gr=1
 
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   geom_polygon(fill = "lemonchiffon1", color = "gray10", size = 1,alpha=.5) +
   theme_bw(16)+
   coord_map(xlim = longlims,  ylim = latlims, proj="albers",lat0=(50),lat1=(55))+
-  geom_tile(data=alelu,aes(x=Var1,y=Var2,fill=ele1,group=gr),alpha=.8,interpolate = F) +
+  # geom_tile(data=alelu,aes(x=Var1,y=Var2,fill=ele1,group=gr),alpha=.8,interpolate = F) +
   scale_fill_gradientn(colours = terrain.colors(100),na.value = "aliceblue")+
   geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
-  theme(axis.text=element_blank(),
-        axis.title=element_text(size=18,face="italic"),
-        axis.ticks = element_blank(),
-        panel.background = element_rect(fill = "transparent", colour = "grey50"),
+  theme(axis.title=element_text(size=18),
+        panel.background = element_rect(fill = "aliceblue", colour = "grey50"),
         legend.title = element_text(size=18),
         legend.text = element_text(size=14),
         panel.grid = element_line(colour="grey60", size=.5),
@@ -251,12 +258,12 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
         legend.position = "none",
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))+
-  # geom_tile(data=garea,aes(x=Var1,y=Var2,group=Var1),alpha=.8,fill="red") +
-  # geom_point(data=lagrid,aes(x=Var1,y=Var2,group=Var1),alpha=.8,fill="red") +
-  scale_y_continuous(breaks = seq(47.875,60.125,2),limits = c(40,70),"Latitude",
-                     minor_breaks = seq(47.875, 60.125, 0.25))+
-  scale_x_continuous(breaks =seq(-6.125,1.875,.25),limits=c(-20,10),"Longitude",
-                     minor_breaks = c(-5.75,-5.5))
+  geom_tile(data=lagrid,aes(x=Var1,y=Var2,group=Var1),alpha=.01, col="tomato4",fill="transparent") +
+  geom_tile(data=gareax,aes(x=Var1,y=Var2,group=Var1),alpha=.8,fill="red") +
+  scale_y_continuous(
+    breaks = c(48,50,52,54,56,58),labels= c("48캮","50캮","52캮","54캮","56캮","58캮"),limits = c(40,70),"Latitude")+
+  scale_x_continuous(
+    breaks =c(-6,-4,-2,0,2),labels= c("-6캞","-4캞","-2캞","0캞","2캞"),"Longitude") 
 
  
 ################################Import ncdf files#####################################
@@ -477,30 +484,7 @@ for (i in (1:33)){
 
 }
 
-thrr<-as.vector(thw) 
-min(thrr)
-elonlat <- as.matrix(expand.grid(newformat$lon,newformat$lat))
-thrbg<-data.frame(elonlat,thrr)
-thrbg$gr=1
-longlims=c(-5.7,1.7)
-latlims=c(48.4,58.5)
-ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  theme_bw(16)+
-  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
-  geom_raster(data=thrbg,aes(x=Var1,y=Var2,fill=thrr,group=gr),alpha=.8,interpolate = F) +
-  scale_fill_gradientn(name = expression(paste("w threshold [m s"^"-1","]")),colours = rbPal(100),na.value = "aliceblue")+
-  geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
-  theme(axis.text=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
-        panel.background = element_rect(fill = "white", colour = "grey50"),
-        legend.title = element_text(size=18),
-        legend.text = element_text(size=14),
-        legend.key = element_rect(fill = "transparent", colour = "transparent"),
-        legend.key.size = unit(1, "cm"))+
-  scale_y_continuous(
-    breaks = c(48,50,52,54,56,58,60),limits = c(40,70),"Latitude")+
-  scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitude") 
+
 # coord_map(xlim = longlims,  ylim = latlims, proj="albers",lat0=(50),lat1=(55))
 
 
@@ -510,11 +494,66 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
 
 #===============================================================#
 
-############Preparation of the data for clustering###########
+#Plot for figure 4
 
 load(paste0(getwd(),"/data/interdat/Wnd_99_AllP.Rdata"))
 thw<-thr
-load("out/interdat/Rain_99_AllP.Rdata")
+load("data/interdat/Rain_99_AllP.Rdata")
+rbPal <- rbPal <- colorRampPalette(c('royalblue',"skyblue","gold","darkorange",'red',"purple"))
+thww<-as.vector(thw) 
+thrr<-as.vector(thr) 
+min(thrr)
+
+#load one file for long lat
+load(file=paste0(getwd(),"/data/interdat/windP1.Rdata"))
+elonlat <- as.matrix(expand.grid(newformat$lon,newformat$lat))
+thwbg<-data.frame(elonlat,thww)
+thrbg<-data.frame(elonlat,thrr)
+thwbg$gr=1
+thrbg$gr=1
+
+longlims=c(-5.7,1.7)
+latlims=c(48.4,58.5)
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
+  geom_raster(data=thrbg,aes(x=Var1,y=Var2,fill=thww,group=gr),alpha=.8,interpolate = F) +
+  scale_fill_gradientn(name = expression(paste("w threshold [m s"^"-1","]")),colours = rbPal(100),na.value = "aliceblue")+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=18),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_text(size=18),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))+
+  scale_y_continuous(
+    breaks = c(48,50,52,54,56,58),labels= c("48째N","50째N","52째N","54째N","56째N","58째N"),limits = c(40,70),"Latitude")+
+  scale_x_continuous(
+    breaks =c(-6,-4,-2,0,2),labels= c("-6째E","-4째E","-2째E","0째E","2째E"),limits=c(-10,10),"Longitude") 
+
+
+ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
+  theme_bw(16)+
+  coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
+  geom_raster(data=thrbg,aes(x=Var1,y=Var2,fill=thrr,group=gr),alpha=.8,interpolate = F) +
+  scale_fill_gradientn(name = expression(paste("p threshold [mm]")),colours = rbPal(100),na.value = "aliceblue")+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
+  theme(axis.text=element_text(size=16),
+        axis.title=element_text(size=18),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_text(size=18),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))+
+  scale_y_continuous(
+    breaks = c(48,50,52,54,56,58),labels= c("48째N","50째N","52째N","54째N","56째N","58째N"),limits = c(40,70),"Latitude")+
+  scale_x_continuous(
+    breaks =c(-6,-4,-2,0,2),labels= c("-6째E","-4째E","-2째E","0째E","2째E"),limits=c(-10,10),"Longitude") 
+
+############Preparation of the data for clustering###########
+
 rm(nc,newformat,hazmat)
 gc()
 sptdfx<-list()

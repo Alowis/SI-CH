@@ -271,7 +271,7 @@ load(file="ident_events_v5.Rdata")
 ultim<-cbind(validationdays,retout)
 retout$N_ev=as.numeric(retout$N_ev)
 mean(retout$N_ev[which(retout$N_ev>0)])
-ptin<-ultim[which(ultim$Dominant.hazard=="Extreme rainfall"),]
+ptin<-ultim
 ratio=1-length(ptin$Year[which(ptin$ID_mod=="")])/length(ptin$Year)
 ccm<-ultim[which(ultim$N_ev==1),]
 
@@ -336,15 +336,14 @@ rgb.palette=colorRampPalette(rev(c("#d53e4f","#fc8d59","#fee08b","#ffffbf","#e6f
 #Figure 5.11
 ggplot(data = ukg2) + 
   geom_sf(aes(fill = V1)) +
-  scale_fill_gradientn(colours = rgb.palette(20)," ",
-                       guide= "colourbar",breaks = c(30,40,50,60,70),limits=c(20,70))+
+  scale_fill_gradientn(colours = rgb.palette(20),
+                       guide= "colourbar",breaks = c(30,40,50,60,70),limits=c(20,70), "# of events \n per region")+
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18,face="italic"),
         panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5), 
         panel.background = element_rect(fill = "aliceblue"),
         legend.title = element_text(size=18),
         legend.text = element_text(size=14)) +
-  ggtitle("Events per NUTS1 Region") + 
   coord_sf()
 
 ukg2$perc=ukg2$rati*100
@@ -352,14 +351,14 @@ ukg2$perc=ukg2$rati*100
 #Figure 5.12
 ggplot(data = ukg2) + 
   geom_sf(aes(fill = perc)) +
-  scale_fill_gradient2(guide= "colourbar",low="khaki",mid ="#addd8e", high = "#31a354",na.value="white",midpoint=95,"%")+
+  scale_fill_gradient2(guide= "colourbar",low="khaki",mid ="#addd8e", high = "#31a354",na.value="white",midpoint=95,"Hit rate (%)")+
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18,face="italic"),
         panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5), 
         panel.background = element_rect(fill = "aliceblue"),
         legend.title = element_text(size=18),
         legend.text = element_text(size=14)) +
-  ggtitle("Percentage of events detected") + 
+    labs(fill = "Hit rate (%)")+
   coord_sf()
 
 qltim=ultim[which(ultim$Dominant.hazard=="Extreme wind"),]
@@ -370,8 +369,8 @@ for(idw in 1:length(wix)){
   bof=wix[[idw]]
   wcom=F
   iscom=(match(as.numeric(bof),compound$ev2))
-  if(length(iscom)>1)wcom=T
-  if(length(iscom)<1)wcom=F
+  if(length(na.omit(iscom))>=1){wcom=T}
+  if(length(na.omit(iscom))<1)wcom=F
   isc=c(isc,wcom)
   
 }
@@ -384,10 +383,10 @@ rix<-  strsplit(rainid, ",")
 irc=c()
 for(idw in 1:length(rix)){
   bof=rix[[idw]]
-  wcom=F
+  wcom=1
   iscom=(match(as.numeric(bof),compound$ev1))
-  if(length(iscom)>1)wcom=T
-  if(length(iscom)<1)wcom=F
+  if(length(na.omit(iscom))>=1){wcom=T}
+  if(length(na.omit(iscom))<1)wcom=F
   irc=c(irc,wcom)
   
 }
@@ -395,10 +394,45 @@ length(irc[which(irc==T)])
 
 rltim$iscompound=irc
   
+metaw=c()
+for (ul in 1:11){
+  ola<-qltim[which(qltim[,(9+ul)]==1),]
+  ouy<-length(ola$Startdate[which(ola$ID_mod=="")])
+  oc=length(ola$Startdate)
+  oc2=c(oc,ouy)
+  metaw=rbind(metaw,oc2)
+}
 
+wrat=length(qltim$Startdate[which(qltim$ID_mod=="")])
+length(qltim$Startdate)
+ratw=(61-wrat)/61
+
+rrat=length(rltim$Startdate[which(rltim$ID_mod=="")])
+length(rltim$Startdate)
+ratr=(96-rrat)/96
+
+metaw=as.data.frame(metaw)
+metaw$rati=1-metaw$V2/metaw$V1
+
+metar=c()
+for (ul in 1:11){
+  ola<-rltim[which(rltim[,(9+ul)]==1),]
+  ouy<-length(ola$Startdate[which(ola$ID_mod=="")])
+  oc=length(ola$Startdate)
+  oc2=c(oc,ouy)
+  metar=rbind(metar,oc2)
+}
+
+metar=as.data.frame(metar)
+metar$rati=1-metar$V2/metar$V1
 
 alultim=rbind(rltim,qltim)
-
+length(alultim$Year[which(alultim$iscompound==T)])
+comprate=data.frame(alultim$iscompound,alultim$compound.wind.precip)
+tt=alultim[which(comprate[,1]==T & comprate[,2]==1),]
+tf=comprate[which(comprate[,1]==T & comprate[,2]==0),]
+ft=alultim[which(comprate[,1]==F & comprate[,2]==1),]
+ff=comprate[which(comprate[,1]==F & comprate[,2]==0),]
 
 alultim$start=as.Date(alultim$Startdate,format='%d/%m/%Y')
 alultim$end=as.Date(alultim$Enddate,format='%d/%m/%Y')
@@ -420,7 +454,7 @@ for (ite in 1:length(alultim$Year)){
   regl<-which(mom[,10:20]==1)
   ev.rep=rep(mom$Startdate,length(regl))
   ev.tip=rep(mom$event_type,length(regl))
-  ev.com=rep(mom$iscompound,length(regl))
+  ev.com=rep(mom$compound.wind.precip,length(regl))
   ev.repi=cbind(ev.rep,regl,ev.tip,ev.com)
   ev.tot=rbind(ev.tot,ev.repi)
 }
@@ -430,7 +464,7 @@ ev.tot$ev.rep=as.Date(ev.tot$ev.rep,format='%d/%m/%Y')
 ev.tot$regl=as.numeric(ev.tot$regl)
 
 
-ev.comp=ev.tot[which(ev.tot$ev.com==T),]
+ev.comp=ev.tot[which(ev.tot$ev.com==1),]
 insert_minor <- function(major_labs, n_minor) {
   labs <-c( sapply( major_labs, function(x) c(x, rep("", 9) ) ) )
   labs[1:(length(labs)-n_minor)]}
@@ -459,7 +493,7 @@ ggplot( data= ev.tot, aes(x= ev.rep,y=pos,shape=ev.tip,color=ev.tip)) +
   scale_shape_manual(values=c("rain"=1,"wind"=4))+
   theme(axis.text=element_text(size=16),
         axis.text.y=element_text(size=16),
-        axis.title=element_text(size=18,face="italic"),
+        axis.title=element_text(size=18),
         panel.grid.major.x = element_blank() ,
         panel.border = element_rect(size=1.2, fill = NA),
         # panel.grid.minor.x = element_line( size=.8, color="black" ) ,
