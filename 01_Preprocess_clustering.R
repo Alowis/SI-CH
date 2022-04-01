@@ -518,8 +518,9 @@ latlims=c(48.4,58.5)
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   theme_bw(16)+
   coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
-  geom_raster(data=thrbg,aes(x=Var1,y=Var2,fill=thww,group=gr),alpha=.8,interpolate = F) +
-  scale_fill_gradientn(name = expression(paste("w threshold [m s"^"-1","]")),colours = rbPal(100),na.value = "aliceblue")+
+  geom_raster(data=thrbg,aes(x=Var1,y=Var2,fill=thww,group=gr),alpha=1,interpolate = F) +
+  #scale_fill_gradientn(name = expression(paste("w threshold [m s"^"-1","]")),colours = rbPal(100),na.value = "aliceblue")+
+  scale_fill_distiller(palette = "YlOrBr",name = expression(paste("w threshold [m s"^"-1","]")),breaks=breaks_extended(6),guide="coloursteps",direction=1)+
   geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18),
@@ -529,16 +530,17 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))+
   scale_y_continuous(
-    breaks = c(48,50,52,54,56,58),labels= c("48째N","50째N","52째N","54째N","56째N","58째N"),limits = c(40,70),"Latitude")+
+    breaks = c(48,50,52,54,56,58),labels= c("48캮","50캮","52캮","54캮","56캮","58캮"),limits = c(40,70),"Latitude")+
   scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),labels= c("-6째E","-4째E","-2째E","0째E","2째E"),limits=c(-10,10),"Longitude") 
+    breaks =c(-6,-4,-2,0,2),labels= c("-6캞","-4캞","-2캞","0캞","2캞"),limits=c(-10,10),"Longitude") 
 
 
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   theme_bw(16)+
   coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
-  geom_raster(data=thrbg,aes(x=Var1,y=Var2,fill=thrr,group=gr),alpha=.8,interpolate = F) +
-  scale_fill_gradientn(name = expression(paste("p threshold [mm]")),colours = rbPal(100),na.value = "aliceblue")+
+  geom_raster(data=thrbg,aes(x=Var1,y=Var2,fill=thrr,group=gr),alpha=1,interpolate = F) +
+  #scale_fill_gradientn(name = expression(paste("p threshold [mm]")),colours = rbPal(100),na.value = "aliceblue")+
+  scale_fill_distiller(palette = "YlGnBu",name = expression(paste("p threshold [mm]")),breaks=breaks_extended(6),guide="coloursteps",direction=1)+
   geom_polygon(fill = "transparent", color = "gray10", size = 1.2)+
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18),
@@ -548,9 +550,9 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
         legend.key = element_rect(fill = "transparent", colour = "transparent"),
         legend.key.size = unit(1, "cm"))+
   scale_y_continuous(
-    breaks = c(48,50,52,54,56,58),labels= c("48째N","50째N","52째N","54째N","56째N","58째N"),limits = c(40,70),"Latitude")+
+    breaks = c(48,50,52,54,56,58),labels= c("48캮","50캮","52캮","54캮","56캮","58캮"),limits = c(40,70),"Latitude")+
   scale_x_continuous(
-    breaks =c(-6,-4,-2,0,2),labels= c("-6째E","-4째E","-2째E","0째E","2째E"),limits=c(-10,10),"Longitude") 
+    breaks =c(-6,-4,-2,0,2),labels= c("-6캞","-4캞","-2캞","0캞","2캞"),limits=c(-10,10),"Longitude") 
 
 ############Preparation of the data for clustering###########
 
@@ -560,24 +562,24 @@ sptdfx<-list()
 metaHaz<-list()
 metavHour<-list()
 metavDaz<-list()
-hx=2
+hx=1
 wala=F
 
 #################loop for clustering##############
 
 for(hazard in 1:4){
   if(hx==2){
-    if(hazard==1){load("interdat/windP1.Rdata");load(file="interdat/timeP1.Rdata")}
+    if(hazard==1){load("data/interdat/windP1.Rdata");load(file="interdat/timeP1.Rdata")}
     if(hazard==2){load("interdat/windP2.Rdata");load(file="interdat/timeP2.Rdata")}
     if(hazard==3){load("interdat/windP3.Rdata");load(file="interdat/timeP3.Rdata")}
     if(hazard==4){load("interdat/windP4.Rdata");load(file="interdat/timeP4.Rdata")}
     th=thw
   }
   if(hx==1){
-    if(hazard==1){load("interdat/rainP1.Rdata");load(file="interdat/timeP1.Rdata")}
-    if(hazard==2){load("interdat/rainP2.Rdata");load(file="interdat/timeP2.Rdata")}
-    if(hazard==3){load("interdat/rainP3.Rdata");load(file="interdat/timeP3.Rdata")}
-    if(hazard==4){load("interdat/rainP4.Rdata");load(file="interdat/timeP4.Rdata")}
+    if(hazard==1){load("data/interdat/rainP1.Rdata");load(file="data/interdat/timeP1.Rdata")}
+    if(hazard==2){load("data/interdat/rainP2.Rdata");load(file="data/interdat/timeP2.Rdata")}
+    if(hazard==3){load("data/interdat/rainP3.Rdata");load(file="data/interdat/timeP3.Rdata")}
+    if(hazard==4){load("data/interdat/rainP4.Rdata");load(file="data/interdat/timeP4.Rdata")}
     th=thr
   }
 
@@ -669,7 +671,7 @@ for(hazard in 1:4){
     
     walabibix$order=walabibord
     
-    plot(walabibun)
+    plot(walabibix)
     fatos<-walabibix[which(walabibix$order>1270000),]
     light<-seq(1,1270000,by=1000)
     #
@@ -756,7 +758,7 @@ for(hazard in 1:4){
 
   
   ##Update on epcl for rain events
- cluster=F
+ cluster=T
 
   rpip<-dbscan::dbscan(sampspd, eps=epcl, minPts = 10)
   

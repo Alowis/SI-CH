@@ -153,6 +153,8 @@ qw=quantile (metaHaf$viw.surf,c(0.1,0.5,.95))
 qc=quantile (compound$spacescale,c(0.1,0.5,.95))
 ############################02. Event visualiser###########################
 
+
+#Always loading these files
 load(file="out/RainEv_hdat_1979-2019.Rdata")
 load(file="out/RainEv_ldat_1979-2019.Rdata")
 metavDar=metavDaf
@@ -243,11 +245,11 @@ library(ggnewscale)
 bs.palette=colorRampPalette(c("skyblue","dodgerblue","blue","darkblue"),interpolate="spline",bias=1)
 bs.palette2=colorRampPalette(c("lightgreen","yellowgreen","gold","orangered","deeppink"),interpolate="spline",bias=1.5)
 
+
+
+
 longlims=c(-5.7,1.7)
 latlims=c(48.4,58.5)
-
-
-
 
 
 #only rain, only wind or compound events can be tested here
@@ -606,7 +608,7 @@ kaka<-which(!is.na(match(sp03$combin,compoundX$combin)))
 length(kaka)/length(sp03$combin)
 sp04<-sp03[kaka,]
 
-# focus="major"
+focus="all"
 if(focus=="major"){
   sp03=sp04
 }
@@ -721,11 +723,12 @@ locav$pcw<-locav$tcom/locav$twin
 locav$pcr<-locav$tcom/locav$train
 locav$pr<-locav$train/(24*365.25)
 locav$pw<-locav$twin/(24*365.25)
+locav$pcom=locav$tcom/(24*365.25)
 locav$prc=locav$pcr*locav$pr
 locav$pwc=locav$pcw*locav$pw
 locav$pnaif<-locav$pr*locav$pw
-locav$mult<-locav$pwc/locav$pnaif
-max(locav$pwc)
+locav$mult<-locav$pcom/locav$pnaif
+max(locav$pcom)
 longlims=c(-5.7,1.7)
 latlims=c(48.4,58.5)
 max(locav$mult)
@@ -773,21 +776,26 @@ locav$fwmm<-locav$wmm*100
 locav$rwmm<-rmm*wmm*100
 
 
-rgb.palette=colorRampPalette(c("lightblue", 
+longlims=c(-5.7,1.7)
+latlims=c(48.4,58.5)
+
+rgb.palette=colorRampPalette(c("white", 
                                "royalblue","orange","red","purple"),interpolate="linear",bias=1)
 
+rgb.palette.rev=colorRampPalette(c("white","khaki1","orange","red","purple"),interpolate="linear",bias=1)
 ##Plot 1##
 
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "white", color = "gray10", size = 1) +
   theme_bw(16)+
   # scale_fill_gradientn(colours = rgb.palette(100),"Total hours in a CE",breaks=breaks_extended(5),limits=c(min(locav$x)-0.1*min(locav$x),max(locav$x)+.1*min(locav$x)))+
   coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3)+
-  # geom_raster(data=locav,aes(x=lon,y=lat,fill=tcom,group=loc),interpolate = F,alpha=.7)+
-  geom_contour_fill(data=locav,aes(x=lon,y=lat,z = mult,group=grp),alpha=0.5) +
-  scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100)," ",breaks=breaks_extended(5))+
-  # scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100),"LMF",breaks=breaks_extended(5),limits=c(0,.015))+
+  #geom_raster(data=locav,aes(x=lon,y=lat,fill=twin,group=loc),interpolate = F,alpha=.7)+
+  geom_contour_fill(data=locav,aes(x=lon,y=lat,z = tcom,group=grp),alpha=0.9) +
+  #scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette(100)," ",breaks=breaks_extended(5))+
+  #scale_fill_fermenter(palette="YlOrRd",breaks=breaks_extended(8),direction=1,guide="coloursteps")+
+  scale_fill_gradientn(trans=scales::modulus_trans(1),colours = rgb.palette.rev(10),breaks=breaks_extended(6),guide='coloursteps',limits=c(0,120))+
   labs(y = "Latitude",x = "Longitude",fill= "Total hours in a CE",size=20)+
+  geom_polygon(fill = "transparent", color = "gray20", size = 1) +
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18,face="italic"),
         panel.background = element_rect(fill = "white", colour = "grey50"),
@@ -804,12 +812,13 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
 
 ##Plot 2##
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
-  geom_polygon(fill = "white", color = "gray10", size = 1) +
-  theme_bw(16)+
 
   coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.2)+
-  geom_contour_fill(data=locav,aes(x=lon,y=lat,z = fwind,group=grp),binwidth=5,alpha=0.5) +
-  scale_fill_gradientn(colours = rgb.palette(100),"Frequency [%]",breaks=breaks_extended(4),limits=c(0,60))+
+  geom_contour_fill(data=locav,aes(x=lon,y=lat,z = frain,group=grp),binwidth=5,alpha=1) +
+  #scale_fill_fermenter(palette="YlOrRd",breaks=breaks_extended(6),direction=1,guide="coloursteps",limits=c(10,100))+
+  scale_fill_distiller(palette = "YlOrRd","Frequency [%]",breaks=breaks_extended(6),limits=c(0,60),guide="coloursteps",direction=1)+
+  geom_polygon(fill = "transparent", color = "gray10", size = 1) +
+  theme_bw(16)+
   labs(y = "Latitude",x = "Longitude",fill= "Frequency [%]",size=20)+
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18,face="italic"),
@@ -1128,6 +1137,9 @@ wev=5423  #storm xaver 2013
 
 cev=4172 #storm angus 4286
 
+
+ilr=c(6048,6055,6058,6049,6052,6047,6051,6054,6057) #illustration event 136 manuscript
+
 compound$id=c(1:length(compound$combin))
 cevc=compound$combin[which(compound$id==cev)]
 
@@ -1137,6 +1149,7 @@ ultim<-cbind(validationdays,retout)
 rltim=ultim[which(ultim$Dominant.hazard=="Extreme rainfall"),]
 rainid=as.vector(rltim$ID_mod)
 rix<-  strsplit(rainid, ",")
+
 irc=c()
 listev<-c()
 ism=c()
@@ -1173,6 +1186,8 @@ coui=as.data.frame(ccl)
 coui$cl=(coui$cl/1485)*100
 max(coui$V4)
 cofl=coui[which(coui$V2==rev),]
+colilu=coui[which(!is.na(match(coui$V2,ilr))),]
+(unique(colilu$V2))
 cool=inner_join(coui,listevp,by="V2")
 
 rgb.palette=colorRampPalette(c("#ffffcc","#ffeda0", "#fed976", "#feb24c","#fd8d3c","#fc4e2a",
@@ -1183,12 +1198,13 @@ ggplot(coui, aes(x = qt, y = cl, group=as.character(V2))) +
   geom_line(alpha=.5,color="grey",size=1.2)+
   
   scale_x_continuous(limits = c(0,1), expand = c(0, 0),"Intensity") +
-  scale_y_continuous(limits = c(0,100), expand = c(0, 0),"Spatial footprint [%]") +
+  scale_y_continuous(limits = c(0,100), expand = c(0, 0),"Footprint [%]") +
   scale_size(range = c(0.3, 1.2)) +
   scale_linetype_identity() +
   
   geom_line(data=cool, aes(x = qt, y = cl, group=as.character(V2),color=V4),alpha=.7,size=1.2,linemitre=10) +
   geom_line(data=cofl,aes(x = qt, y = cl, group=as.character(V2)),color="darkblue",size=1.2,linemitre=10) +
+  geom_line(data=colilu,aes(x = qt, y = cl, group=as.character(V2)),color="darkgreen",size=1.2,linemitre=10) +
   # scale_alpha_continuous(c(0.7, 0.8),guide = FALSE)+
   theme(axis.text=element_text(size=16),
         panel.grid.major = element_line(colour = "lightgrey") ,
@@ -1274,7 +1290,7 @@ ggplot(coui, aes(x = qt, y = cl, group=as.character(V2))) +
   geom_line(alpha=.5,color="grey",size=1.2)+
 
   scale_x_continuous(limits = c(0,1), expand = c(0, 0),"Intensity") +
-  scale_y_continuous(limits = c(0,100), expand = c(0, 0),"Spatial footprint [%]") +
+  scale_y_continuous(limits = c(0,100), expand = c(0, 0),"Footprint [%]") +
   scale_size(range = c(0.3, 1.2)) +
   scale_linetype_identity() +
   
@@ -1292,6 +1308,199 @@ ggplot(coui, aes(x = qt, y = cl, group=as.character(V2))) +
   scale_color_gradientn(colors=rgb.palette(100),na.value="white",limits=c(1,100),"Duration [h]")+
   theme(text = element_text(size=16))
   # geom_point(size = 4, shape = 21) 
+
+
+
+
+
+qltim=ultim[which(ultim$Dominant.hazard=="Extreme wind"),]
+windid=as.vector(qltim$ID_mod)
+wix<-  strsplit(windid, ",")
+isc=c()
+listev<-c()
+ism=c()
+comid=c()
+for(idw in 1:length(wix)){
+  wmu=c()
+  wcom=c()
+  bof=wix[[idw]]
+  bofv<-as.data.frame(matrix(unlist(bof),ncol=length(bof),byrow=T))
+  
+  if(length(bof)>1)wmu=rep(1,length(bof))
+  if(length(bof)==1)wmu=2
+  
+  iscom=(match(as.numeric(bof),compound$ev2))
+  icomid=na.omit(compound$combin[iscom])
+  if(length(iscom)>1)wcom=T
+  if(length(iscom)<=1)wcom=F
+  comid=c(icomid,comid)
+  isc=c(isc,wcom)
+  ism=c(ism,wmu)
+  listev=c(listev,bofv)
+  
+}
+
+listev=as.numeric(listev)
+listevp=cbind(listev,ism)
+listevp=as.data.frame(listevp)
+names(listevp)=c("V2","linetype")
+
+qmin=quantile(metaHaf$viw.max,.5)
+qt=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,.95,.99)
+qlist=c(0,quantile(metaHaf$viw.max,.1),quantile(metaHaf$viw.max,.2),
+        quantile(metaHaf$viw.max,.3),quantile(metaHaf$viw.max,.4),
+        quantile(metaHaf$viw.max,.5),quantile(metaHaf$viw.max,.6),
+        quantile(metaHaf$viw.max,.7),quantile(metaHaf$viw.max,.8),
+        quantile(metaHaf$viw.max,.9),quantile(metaHaf$viw.max,.95),
+        quantile(metaHaf$viw.max,.99))
+
+bb<-metaHaf$ev[which(metaHaf$viw.max>qmin)]
+plot(qlist)
+
+ccl=c()
+clo=c()
+for(evi in bb){
+  metev<-metavDaf[which(metavDaf$ev==evi),]
+  lan=metaHaf$x.dur[which(metaHaf$ev==evi)]
+  cl=c()
+  for(q in 1:12){
+    l=length(metev$vi.max[which(metev$vi.max>qlist[q])])
+    cl=c(cl,l)
+  }
+  clo<-cbind(qt,rep(evi,11),cl,rep(lan,11))
+  ccl<-rbind(ccl,clo)
+}
+
+wlen=length(listevp$V2)/length(qltim$Year)
+coui=as.data.frame(ccl)
+coui$cl=(coui$cl/1485)*100
+cost=coui[which(coui$V2==wev),]
+cool=inner_join(coui,listevp,by="V2")
+rgb.palette=colorRampPalette(c("#ffffcc","#ffeda0", "#fed976", "#feb24c","#fd8d3c","#fc4e2a",
+                               "#e31a1c","#bd0026","#800026"),interpolate="linear",bias=1)
+
+
+ggplot(coui, aes(x = qt, y = cl, group=as.character(V2))) +
+  geom_line(alpha=.5,color="grey",size=1.2)+
+  
+  scale_x_continuous(limits = c(0,1), expand = c(0, 0),"Intensity") +
+  scale_y_continuous(limits = c(0,100), expand = c(0, 0),"Footprint [%]") +
+  scale_size(range = c(0.3, 1.2)) +
+  scale_linetype_identity() +
+  
+  geom_line(data=cool, aes(x = qt, y = cl, group=as.character(V2),color=V4),alpha=.7,size=1.2,linemitre=10) +
+  geom_line(data=cost,aes(x = qt, y = cl, group=as.character(V2)),color="darkblue",size=1.2,linemitre=10) +
+  # scale_alpha_continuous(c(0.7, 0.8),guide = FALSE)+
+  theme(axis.text=element_text(size=16),
+        panel.grid.major = element_line(colour = "lightgrey") ,
+        panel.border = element_rect(size=1.2, fill = NA),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_text(size=18),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))+
+  scale_color_gradientn(colors=rgb.palette(100),na.value="white",limits=c(1,100),"Duration [h]")+
+  theme(text = element_text(size=16))
+# geom_point(size = 4, shape = 21) 
+
+
+
+#########################################Compound########################
+comidf=c(comidr,comid)
+
+
+listev=as.numeric(listev)
+listevp=cbind(listev,ism)
+listevp=as.data.frame(listevp)
+names(listevp)=c("V2","linetype")
+
+
+tesp<-aggregate(list(len=sp03[,3]),
+                by = list(ev2=sp03[,1],ev1 = sp03[,4],loc=sp03[,2]),
+                FUN = function(x) c(length=length(unique(x))))
+tesp <- do.call(data.frame, tesp)
+
+tesp$cev=paste(tesp$ev1,tesp$ev2)
+
+caca<-inner_join(tesp,metatest,by=c("loc","ev1"))
+names(metavDaf)[1]="ev2"
+caca2=inner_join(caca,metavDaf,by=c("loc","ev2"))
+bivar=caca2[,c(10,7)]
+
+## Evaluate empirical copula
+
+
+ep=as.data.frame(pobs(bivar))
+
+tesp=cbind(tesp,ep)
+u <- epdata # random points were to evaluate the empirical copula
+ecb <- C.n(u, X = bivar)
+cbprob=1-qt-qt+ec
+
+plot(as.numeric(cbprob))
+
+qt=c(0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,.95,.99)
+qlist=c(0,quantile(metaHaf$viw.max,.1),quantile(metaHaf$viw.max,.2),
+        quantile(metaHaf$viw.max,.3),quantile(metaHaf$viw.max,.4),
+        quantile(metaHaf$viw.max,.5),quantile(metaHaf$viw.max,.6),
+        quantile(metaHaf$viw.max,.7),quantile(metaHaf$viw.max,.8),
+        quantile(metaHaf$viw.max,.9),quantile(metaHaf$viw.max,.95),
+        quantile(metaHaf$viw.max,.99))
+
+bb<-metaHaf$ev[which(metaHaf$viw.max>qmin)]
+plot(qlist)
+bij=((match(tesp$cev, compound$combin)))
+ortime=compound$ORtime[bij]
+tesp$ortime=ortime
+ccl=c()
+clo=c()
+for(evi in unique(tesp$cev)){
+  metev<-tesp[which(tesp$cev==evi),]
+  lan=unique(tesp$ortime[which(tesp$cev==evi)])
+  cl=c()
+  for(q in 1:12){
+    l=length(metev$cev[which(metev$vi.max>qt[q] & metev$len.sum>qt[q])])
+    cl=c(cl,l)
+  }
+  clo<-cbind(qt,rep(evi,12),cl,rep(lan,12))
+  ccl<-rbind(ccl,clo)
+}
+
+clen=length(comidf)/length(ulticom$Year)
+
+coui=as.data.frame(ccl)
+coui$V4=as.numeric(coui$V4)
+coui$cl=(as.numeric(coui$cl)/1485)*100
+coui$qt=as.numeric(coui$qt)
+cool=coui[which(!is.na(match(coui$V2,comidf))),]
+coc=coui[which(coui$V2==cevc),]
+rgb.palette=colorRampPalette(c("#ffffcc","#ffeda0", "#fed976", "#feb24c","#fd8d3c","#fc4e2a",
+                               "#e31a1c","#bd0026","#800026"),interpolate="linear",bias=1)
+
+
+ggplot(coui, aes(x = qt, y = cl, group=as.character(V2))) +
+  geom_line(alpha=.5,color="grey",size=1.2)+
+  
+  scale_x_continuous(limits = c(0,1), expand = c(0, 0),"Intensity") +
+  scale_y_continuous(limits = c(0,100), expand = c(0, 0),"Spatial footprint [%]") +
+  scale_size(range = c(0.3, 1.2)) +
+  scale_linetype_identity() +
+  
+  geom_line(data=cool, aes(x = qt, y = cl, group=as.character(V2),color=V4),alpha=.7,size=1.2,linemitre=10) +
+  geom_line(data=coc,aes(x = qt, y = cl, group=as.character(V2)),color="darkblue",size=1.2,linemitre=10) +
+  # scale_alpha_continuous(c(0.7, 0.8),guide = FALSE)+
+  theme(axis.text=element_text(size=16),
+        panel.grid.major = element_line(colour = "lightgrey") ,
+        panel.border = element_rect(size=1.2, fill = NA),
+        panel.background = element_rect(fill = "white", colour = "grey50"),
+        legend.title = element_text(size=18),
+        legend.text = element_text(size=14),
+        legend.key = element_rect(fill = "transparent", colour = "transparent"),
+        legend.key.size = unit(1, "cm"))+
+  scale_color_gradientn(colors=rgb.palette(100),na.value="white",limits=c(1,100),"Duration [h]")+
+  theme(text = element_text(size=16))
+# geom_point(size = 4, shape = 21) 
+
 
 gc()
 getwd()
@@ -1438,7 +1647,7 @@ garea<-lagrid[which(!is.na(match(lagrid$Var1,logl)) | !is.na(match(lagrid$Var2,l
 length(garea[,1])/length(lagrid[,1])
 
 ucount2<-sp03
-ucount2$cev=paste(ucount2$ev.x, ucount2$ev.y,sep=" ")
+ucount2$cev=paste(ucount2$ev.y, ucount2$ev.x,sep=" ")
 sp03$loc<-as.character(sp03$loc)
 rgb.palette=colorRampPalette(c("#ffffcc","#ffeda0", "#fed976", "#feb24c","#fd8d3c","#fc4e2a",
                                "#e31a1c","#bd0026","#800026"),interpolate="linear",bias=1)
@@ -1514,32 +1723,75 @@ grid.arrange(plotmap[[1]],plotmap[[2]],plotmap[[3]],plotmap[[4]], layout_matrix 
 sptdurloc<-inner_join(heathrowext,compoundfinalST,by=c("combin"))
 mean(compoundfinalST$spacescale)
 mean(sptdurloc$time.y)
-bib<-c()
+compoundfinalST$cev=compoundfinalST$combin
+
+##### 07. Looking for trends in compound hazard cluster attributes######
+trend=c()
+for (yr in 1:length(unique(compoundfinalST$x.year))){
+  ye=unique(compoundfinalST$x.year)
+  ys=ye[yr]
+  compyr<-compoundfinalST[which(compoundfinalST$x.year.1==ys),]
+  stx=c(mean(compyr$spacescale.y),mean(compyr$ORtime),quantile(compyr$spacescale.y,.95),quantile(compyr$ORtime,.95))
+  trend=rbind(trend,stx)
+}
+trend=as.data.frame(trend)
+names(trend)=c("meSp","meTi","q95Sp","q95Ti")
+trend$year=ye
+vol=1
+rolling = zoo::rollmean(trend[,vol], k = 1, fill = NA)
+plot(ye,rolling)
+
+fit0 <- lm(trend$meSp ~ ye)
+abline(fit0,col="red")
+
+ggplot(trend, aes(x=year, y=meSp)) + 
+  geom_point(color='#2980B9', size = 4) + 
+  geom_smooth(method=lm, color='#2C3E50')
+
+trend.lm <- lm(meTi ~ year, data = trend)
+summary(trend.lm)
+#Periode 1: 1981-1993
+#Periode 2: 1994-2006
+#Periode 3: 2007-2019
+compoundP1=compoundfinalST[which(compoundfinalST$x.year<1994),]
+compoundP2=compoundfinalST[which(compoundfinalST$x.year>1994 & compoundfinalST$x.year<2007),]
+compoundP3=compoundfinalST[which(compoundfinalST$x.year>2006),]
+bib1<-c()
 for(loci in 1: length(unique(ucount2$loc))){
   local<-unique(ucount2$loc)[loci]
   ucouthH<-ucount2[which(ucount2$loc==local),]
-  ucouthH$cev=ucouthH$ev
-  trial<-semi_join(compoundfinalST,ucouthH,by=c("cev"))
-  ohmerd<-c(median(trial$space),median(trial$time))
-  bib<-rbind(bib,ohmerd)
+
+  trial<-semi_join(compoundP1,ucouthH,by=c("cev"))
+  ohmerd<-c(median(trial$spacescale.x),median(trial$ORtime))
+  bib1<-rbind(bib1,ohmerd)
 }
 
+bib3<-c()
+for(loci in 1: length(unique(ucount2$loc))){
+  local<-unique(ucount2$loc)[loci]
+  ucouthH<-ucount2[which(ucount2$loc==local),]
+  
+  trial<-semi_join(compoundP3,ucouthH,by=c("cev"))
+  ohmerd<-c(median(trial$spacescale.x),median(trial$ORtime))
+  bib3<-rbind(bib3,ohmerd)
+}
+bdif=(bib3-bib1)/bib1
 nrow(bib)
-bib<-data.frame(bib,unique(ucount2$loc))
-mbib<-match(bib$unique.ucount2.loc.,cellx$cloc)
-bib<-data.frame(bib,cellx[mbib,])
-plot(bib$X1) 
+bdif<-data.frame(bdif,unique(ucount2$loc))
+mbib<-match(bdif$unique.ucount2.loc.,cellx$cloc)
+bdif<-data.frame(bdif,cellx[mbib,])
+plot(bdif$X1) 
 hist(compoundfinalST$space)
 median(compoundfinalST$space)
 
 ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
   theme_bw(16)+
-  geom_raster(data=bib,aes(x=Var1,y=Var2,fill=X1,group=cluster),interpolate = F)+
+  geom_raster(data=bdif,aes(x=Var1,y=Var2,fill=X2,group=cluster),interpolate = F)+
   # geom_contour_fill(data=elmaxoub1,aes(x=Var1,y=Var2,z=mwg,group=cluster,alpha=.1),na.fill=T)+
   # geom_contour(data=elmaxoub,colour="black",aes(x=Var1,y=Var2,z=mwg,group=cluster))+
   geom_polygon(fill = "transparent", color = "gray10", size = 1) +
   coord_fixed(xlim = longlims,  ylim = latlims, ratio = 1.3) +
-  scale_fill_gradientn(colours = rgb.palette(100))
+  scale_fill_distiller(palette = "RdBu","compound event size \n Relative change",breaks=breaks_extended(6),guide="coloursteps",direction=-1)
 
 
 

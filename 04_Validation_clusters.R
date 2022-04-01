@@ -282,9 +282,10 @@ m2<-month(ultim$Startdate[which(ultim$ID_mod!="")])
 hist(m1,breaks=12)
 hist(m2,breaks=12)
 
+fail= ultim[which(ultim$spatial_match==0),]
 metad=c()
 for (ul in 1:11){
-ola<-ultim[which(ultim[,(9+ul)]==1),]
+ola<-ultim[which(ultim[,(10+ul)]==1),]
 ouy<-length(ola$Startdate[which(ola$ID_mod=="")])
 oc=length(ola$Startdate)
 oc2=c(oc,ouy)
@@ -316,6 +317,7 @@ ggplot(uk_fort, aes(x=long,y=lat,group=group)) +
       breaks =c(-6,-4,-2,0,2),limits=c(-10,10),"Longitiude") 
 
 metad$objectid=c(1,2,3,4,5,6,7,8,9,10,11)
+mean(metad$V1)
 ukg2<-left_join(ukg,metad, by="objectid")
 
 hist(as.numeric(ultim$N_ev),breaks=20)
@@ -336,8 +338,8 @@ rgb.palette=colorRampPalette(rev(c("#d53e4f","#fc8d59","#fee08b","#ffffbf","#e6f
 #Figure 5.11
 ggplot(data = ukg2) + 
   geom_sf(aes(fill = V1)) +
-  scale_fill_gradientn(colours = rgb.palette(20),
-                       guide= "colourbar",breaks = c(30,40,50,60,70),limits=c(20,70), "# of events \n per region")+
+  scale_fill_gradient2(low="beige",mid ="pink", high = "purple",na.value="white",midpoint=45,
+                       guide= "coloursteps",breaks = c(30,40,50,60,70),limits=c(20,70), "# of events \n per region")+
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18,face="italic"),
         panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5), 
@@ -351,7 +353,7 @@ ukg2$perc=ukg2$rati*100
 #Figure 5.12
 ggplot(data = ukg2) + 
   geom_sf(aes(fill = perc)) +
-  scale_fill_gradient2(guide= "colourbar",low="khaki",mid ="#addd8e", high = "#31a354",na.value="white",midpoint=95,"Hit rate (%)")+
+  scale_fill_gradient2(guide= "coloursteps",low="khaki",mid ="#addd8e", high = "#31a354",na.value="white",midpoint=95,"Hit rate (%)")+
   theme(axis.text=element_text(size=16),
         axis.title=element_text(size=18,face="italic"),
         panel.grid.major = element_line(color = gray(.5), linetype = "dashed", size = 0.5), 
