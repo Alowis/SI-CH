@@ -1,4 +1,4 @@
-this methodology uses gridded data (here Climate reanalysis) and the
+This methodology uses gridded data (here Climate reanalysis) and the
 DBSCAN clustering algorithm to identify spatiotemporal clusters of
 single and compound hazards
 
