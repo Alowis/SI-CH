@@ -162,7 +162,7 @@ The main steps of the methodology are the following:
     values. This is done in the file “01\_Preprocess\_Clustering.R”.
 
 <figure>
-<img src="figures/thresholds.png" style="width:70.0%" alt="" /><figcaption>Threshold values for wind gust and precipitation</figcaption>
+<img src="figures/Figure5.newspe.png" style="width:70.0%" alt="" /><figcaption>Threshold values for wind gust and precipitation</figcaption>
 </figure>
 
 -   Single hazard spatiotemporal clusters. The different parameters
@@ -256,7 +256,7 @@ between SI-CH outputs and the set of significant events (Hit rate =
 “04\_Validation\_clusters.R”.
 
 <figure>
-<img src="figures/confrontation.png" style="width:70.0%" alt="" /><figcaption>Distribution of significant events per NUTS1 regions (a) and hit rate per NUTS1 regions (b)</figcaption>
+<img src="figures/Figure11.png" style="width:70.0%" alt="" /><figcaption>Distribution of significant events per NUTS1 regions (a) and hit rate per NUTS1 regions (b)</figcaption>
 </figure>
 
 Sensitivity analysis
